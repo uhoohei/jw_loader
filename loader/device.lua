@@ -158,4 +158,48 @@ function device.cancelAlert()
     cc.Native:cancelAlert()
 end
 
+if device.platform == "android" then
+    if cc.bPlugin_ then
+        local luaj = require("cocos.cocos2d.luaj")
+    else
+        local luaj = require(cc.PACKAGE_NAME .. ".luaj")
+    end
+end
+
+if device.platform == "ios" then
+    if cc.bPlugin_ then
+        local luaoc = require("cocos.cocos2d.luaoc")
+    else
+        local luaoc = require(cc.PACKAGE_NAME .. ".luaoc")
+    end
+end
+
+local function getAndroidChannelId(java_class, java_method_name, java_method_params, java_method_sig)
+    local luaj = require("loader.luaj")
+    local ok, ret = luaj.callStaticMethod(java_class, java_method_name, java_method_params, java_method_sig);
+    if not ok then
+        return 0
+    end
+    return tonumber(ret)
+end
+
+local function getIOSChannelId(oc_class, oc_method_name, oc_method_params)
+    local luaoc = require("loader.luaoc")
+    local ok, cid = luaoc.callStaticMethod(oc_class, oc_method_name, oc_method_params)
+    if not ok then
+        return 0
+    end
+    return tonumber(cid)
+end
+
+function device.getChannelId(java_class, java_method_name, java_method_params, java_method_sig, oc_class, oc_method_name, oc_method_params)
+    if device.platform == "android" then
+        return getAndroidChannelId(java_class, java_method_name, java_method_params, java_method_sig)
+    end
+    if device.platform == "ios" then
+        return getIOSChannelId(oc_class, oc_method_name, oc_method_params)
+    end
+    return 0
+end
+
 return device

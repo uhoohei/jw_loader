@@ -87,6 +87,7 @@ local UPDATE_PACKAGE_INDEX = "loader.zip"  -- 更新包的索引名称, 这里�
 local DOWNLOAD_THREADS = 4  -- 同时下载的任务数
 local DOWNLOAD_SCHEDULER = nil  -- 下载的定时器
 local DOWNLOAD_TASK_RUNNING = 0  -- 正在进行的下载数量
+local GAME_CHANNEL_ID = 0   -- 游戏渠道ID
 --------------------------------- CONFIG END ---------------------------------
 
 
@@ -112,6 +113,10 @@ function loader.init()
         logFile('loader.init fail with nil state')
         return
     end
+
+    GAME_CHANNEL_ID = device.getChannelId(updater.java_class, updater.java_method_name, 
+        updater.java_method_params, updater.java_method_sig, 
+        updater.oc_class, updater.oc_method_name, updater.oc_method_params)
 
     logFile(updater.work_path)
     local ok, err = mkdir(updater.work_path, true)
