@@ -348,6 +348,20 @@ local function isNew__(newV, compV)
     return checkint(newV) ~= checkint(compV)
 end
 
+function loader.isMatchRedirectList_(result)
+    if not result or not result.redirectChannels then
+        return false
+    end
+    local flag = false
+    for _,v in pairs(result.redirectChannels) do
+        if tonumber(v) == GAME_CHANNEL_ID then
+            flag = true
+            break
+        end
+    end
+    return flag
+end
+
 function loader.checkRedirect_(result)
     logFile("loader.checkRedirect_")
     if not result.redirectURL or string.len(result.redirectURL) < 8 then  -- 没有跳转链接
@@ -355,14 +369,7 @@ function loader.checkRedirect_(result)
     end
     local inRedirect = true
     if result.redirectChannels and #result.redirectChannels > 0 then
-        local flag = false
-        for _,v in pairs(result.redirectChannels) do
-            if tonumber(v) == GAME_CHANNEL_ID then
-                flag = true
-                break
-            end
-        end
-        inRedirect = flag
+        inRedirect = loader.isMatchRedirectList_(result)
     end
     if not inRedirect then  -- 未在重定向列表里面
         return false
@@ -395,6 +402,13 @@ function loader.checkVersionNumber_(result)
     logFile("check version: ", tostring(newV), tostring(currV), tostring(rawV))
 
     if not loader.checkInOpen_(result) then
+        if not loader.checkRedirect_(result) then
+            loader.endWithEvent_(EVENTS.fail, "NOT IN OPEN OR REDIRECT")
+        end
+        return
+    end
+
+    if loader.isMatchRedirectList_(result) then
         if not loader.checkRedirect_(result) then
             loader.endWithEvent_(EVENTS.fail, "NOT IN OPEN OR REDIRECT")
         end
