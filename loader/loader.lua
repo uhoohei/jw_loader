@@ -1,6 +1,7 @@
 local json = require("loader.json")
 local http = require("loader.http")
 local crypto = require("loader.crypto")
+local device = require("loader.device")
 local network = require("loader.network")
 local scheduler = require("loader.scheduler")
 local utils = require("loader.utils")
@@ -19,6 +20,17 @@ local mkdir = utils.mkdir
 local loadJsonFile = utils.loadJsonFile
 local tableCount = utils.tableCount
 local readResFile = utils.readResFile
+
+-- 小补丁，因为不用CURL库的话这几个变量不会被导出
+if not kCCNetworkStatusNotReachable then
+    kCCNetworkStatusNotReachable = 0
+end
+if not kCCNetworkStatusReachableViaWiFi then
+    kCCNetworkStatusReachableViaWiFi = 1
+end
+if not kCCNetworkStatusReachableViaWWAN then
+    kCCNetworkStatusReachableViaWWAN = 2
+end
 
 --------------------------------- CONFIG START -------------------------------
 -- 下载版本文件，对比检查，下载资源索引文件，检验索引文件，
@@ -196,9 +208,24 @@ function loader.getVersionURL_()
     end
 end
 
+function loader.checkNetwork_(handler)
+    logFile("loader.checkNetwork_")
+    if network.isInternetConnectionAvailable() then
+        return true
+    end
+
+    device.showAlert("网络错误", "当前无可用的网络连接，请检查后再重试！", {"重试"}, function ()
+        loader.update(handler)
+    end)
+    return false
+end
+
 function loader.update(handler)
     logFile("loader.update(handler)")
     assert(handler)
+    if not loader.checkNetwork_(handler) then
+        return
+    end
     if loader.state_ ~= STATES.init and loader.state_ ~= STATES.isEnd then
         return
     end
@@ -301,7 +328,7 @@ function loader.downVersion_()
 end
 
 local function isNew__(newV, compV)
-    return checkint(newV) > checkint(compV)
+    return checkint(newV) ~= checkint(compV)
 end
 
 function loader.checkVersionNumber_(result)
@@ -317,9 +344,8 @@ function loader.checkVersionNumber_(result)
         return
     end
 
-    if result.envId ~= indexInfoRaw.envId or 
-        result.gameId ~= indexInfoRaw.gameId or 
-        result.channelId ~= indexInfoRaw.channelId then
+    if result.gameId ~= indexInfoRaw.gameId or 
+        result.branchId ~= indexInfoRaw.branchId then
         logFile("params check fail ")
         loader.endWithEvent_(EVENTS.fail, 'PARAMS CHECK FAIL!')
         return
@@ -472,6 +498,19 @@ function loader.downloadFiles_()
     loader.onProgress_(loader.calcDownloadProgress_())
     
     DOWNLOAD_TASK_RUNNING = 0
+
+    if kCCNetworkStatusReachableViaWWAN == network.getInternetConnectionStatus() then  -- 数据网络下的提示下载
+        local desc = versionInfoNew.desc or "发现新的资源包需要下载，建议您立即下载。"
+        desc = desc .. string.format("\n大小：%sM", string.format("%0.1f", loader.totalSize_ / 1024 / 1024))
+        device.showAlert("温馨提示", "", {"取消", "下载"}, function (event)
+            if event.buttonIndex == 1 then  -- 取消
+                loader.endWithEvent_(EVENTS.fail, "user cancel in WWAN.")
+            else -- 下载
+                loader.startCheckScheduler_()
+            end
+        end)
+        return
+    end
     loader.startCheckScheduler_()
 end
 
@@ -599,7 +638,7 @@ function loader.checkDownload_()
     if loader.downloadedCount_ > 5000 then
         return loader.onDownloadFinish_("download times too much")
     end
-    if os.time() - loader.startTime_ > 20 * 60 then
+    if os.time() - loader.startTime_ > (updater.seconds or 5 * 60) then
         return loader.onDownloadFinish_("timeout")
     end
     

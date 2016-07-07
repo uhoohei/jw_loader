@@ -66,4 +66,96 @@ local sharedApplication = cc.Application:getInstance()
 local target = sharedApplication:getTargetPlatform()
 device.isAndroid = (target == PLATFORM_OS_ANDROID)
 
+-- start --
+
+--------------------------------
+-- 显示一个包含按钮的弹出对话框
+-- @function [parent=#device] showAlert
+-- @param string title 对话框标题
+-- @param string message 内容
+-- @param table buttonLabels 包含多个按钮标题的表格对象
+-- @param function listener 回调函数
+
+--[[--
+
+显示一个包含按钮的弹出对话框
+
+~~~ lua
+
+local function onButtonClicked(event)
+    if event.buttonIndex == 1 then
+        .... 玩家选择了 YES 按钮
+    else
+        .... 玩家选择了 NO 按钮
+    end
+end
+
+device.showAlert("Confirm Exit", "Are you sure exit game ?", {"YES", "NO"}, onButtonClicked)
+
+~~~
+
+当没有指定按钮标题时，对话框会默认显示一个“OK”按钮。
+回调函数获得的表格中，buttonIndex 指示玩家选择了哪一个按钮，其值是按钮的显示顺序。
+
+]]
+
+-- end --
+
+function device.showAlert(title, message, buttonLabels, listener)
+    if type(buttonLabels) ~= "table" then
+        buttonLabels = {tostring(buttonLabels)}
+    else
+        table.map(buttonLabels, function(v) return tostring(v) end)
+    end
+
+    if DEBUG > 1 then
+        printInfo("device.showAlert() - title: %s", title)
+        printInfo("    message: %s", message)
+        printInfo("    buttonLabels: %s", table.concat(buttonLabels, ", "))
+    end
+
+    if device.platform == "android" then
+        local tempListner = function(event)
+            if type(event) == "string" then
+                event = require("framework.json").decode(event)
+                event.buttonIndex = tonumber(event.buttonIndex)
+            end
+            if listener then listener(event) end
+        end
+        luaj.callStaticMethod("org/cocos2dx/utils/PSNative", "createAlert", {title, message, buttonLabels, tempListner}, "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Vector;I)V");
+    else
+        local defaultLabel = ""
+        if #buttonLabels > 0 then
+            defaultLabel = buttonLabels[1]
+            table.remove(buttonLabels, 1)
+        end
+
+        cc.Native:createAlert(title, message, defaultLabel)
+        for i, label in ipairs(buttonLabels) do
+            cc.Native:addAlertButton(label)
+        end
+
+        if type(listener) ~= "function" then
+            listener = function() end
+        end
+
+        cc.Native:showAlert(listener)
+    end
+end
+
+-- start --
+
+--------------------------------
+-- 取消正在显示的对话框。
+-- @function [parent=#device] cancelAlert
+
+-- end --
+
+function device.cancelAlert()
+    if DEBUG > 1 then
+        printInfo("device.cancelAlert()")
+    end
+    cc.Native:cancelAlert()
+end
+
 return device

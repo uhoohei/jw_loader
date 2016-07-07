@@ -37,6 +37,7 @@ function LoadApp:ctor(configs)
     assert(configs.work_path)
     assert(configs.design_width)
     assert(configs.design_height)
+    assert(configs.seconds)
     _G[appName] = self
     self.configs_ = configs
     self.preload_zips = configs.preload_zips
@@ -44,6 +45,7 @@ function LoadApp:ctor(configs)
     self.work_path = configs.work_path
     self.design_width = configs.design_width
     self.design_height = configs.design_height
+    self.seconds = configs.seconds
 end
 
 function LoadApp:run(checkNewUpdatePackage)
