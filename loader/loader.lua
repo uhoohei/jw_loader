@@ -67,7 +67,7 @@ local ERRORS = {
 }
 
 local versionInfoNew = {}  -- 新下载的版本信息
-local indexInfoCurr = {}  -- 当前版的文件索引信息，可参考resindex.xml文件
+local indexInfoCurr = {}  -- 当前版的文件索引信息，可参考resindex.txt文件
 local indexInfoRaw = {}  -- 原包里面的索引信息
 local indexInfoNew = {}  -- 新下载的索引文件的信息
 local downloadList = {}  -- 总下载任务队列
@@ -81,13 +81,14 @@ local downFailList = {}  -- 下载失败的文件队列
 ]]
 local CURRENT_SUFFIX = ".curr"  -- 当前启用版本所用的后缀
 local NEW_SUFFIX = ".new"  -- 正在更新中的版本的后缀，如果此类文件存在，说明上一次的更新未完成
-local VERSION_FILE_NAME = "version.xml"  -- 其实是json，这里只是为了防止运营商劫持所修改的后缀
-local INDEX_FILE_NAME = "resindex.xml"  -- 其实是json，这里只是为了防止运营商劫持所修改的后缀
+local VERSION_FILE_NAME = "version.txt"  -- 其实是json，这里只是为了防止运营商劫持所修改的后缀
+local INDEX_FILE_NAME = "resindex.txt"  -- 其实是json，这里只是为了防止运营商劫持所修改的后缀
 local UPDATE_PACKAGE_INDEX = "loader.zip"  -- 更新包的索引名称, 这里是为了能更新自身而放在这里的
 local DOWNLOAD_THREADS = 4  -- 同时下载的任务数
 local DOWNLOAD_SCHEDULER = nil  -- 下载的定时器
 local DOWNLOAD_TASK_RUNNING = 0  -- 正在进行的下载数量
 local GAME_CHANNEL_ID = 0   -- 游戏渠道ID
+local IS_REDIRECT = false   -- 重定向标志，当一定重定向后不可再次定向
 --------------------------------- CONFIG END ---------------------------------
 
 
@@ -118,6 +119,7 @@ function loader.init()
         updater.java_method_params, updater.java_method_sig, 
         updater.oc_class, updater.oc_method_name, updater.oc_method_params)
 
+    logFile("init channel id: ", GAME_CHANNEL_ID)
     logFile(updater.work_path)
     local ok, err = mkdir(updater.work_path, true)
     logFile(tostring(ok))
@@ -294,8 +296,19 @@ function loader.clean()
     loader.doingList_ = {}
 end
 
--- 下载version.xml文件
-function loader.downVersion_()
+function loader.doRedirect_(redirectURL)
+    logFile("loader.doRedirect_", redirectURL)
+    if IS_REDIRECT then
+        loader.endWithEvent_(EVENTS.fail, "CAN'T REDIRECT IN REDIRECT")
+        return
+    end
+    IS_REDIRECT = true
+    loader.setState_(STATES.downVersion)
+    loader.downVersion_(redirectURL)
+end
+
+-- 下载version.txt文件
+function loader.downVersion_(url)
     logFile("loader.downVersion_()")
     assert(loader.state_ == STATES.downVersion)
     local url = loader.getVersionURL_() .. '?' .. os.time()
@@ -304,7 +317,6 @@ function loader.downVersion_()
         loader.endWithEvent_(EVENTS.fail, 'get Version URL fail')
         return
     end
-    loader.setState_(STATES.downVersion)
     
     local function failFunc()
         logFile("download version fail")
@@ -336,12 +348,58 @@ local function isNew__(newV, compV)
     return checkint(newV) ~= checkint(compV)
 end
 
+function loader.checkRedirect_(result)
+    logFile("loader.checkRedirect_")
+    if not result.redirectURL or string.len(result.redirectURL) < 8 then  -- 没有跳转链接
+        return false
+    end
+    local inRedirect = true
+    if result.redirectChannels and #result.redirectChannels > 0 then
+        local flag = false
+        for _,v in pairs(result.redirectChannels) do
+            if tonumber(v) == GAME_CHANNEL_ID then
+                flag = true
+                break
+            end
+        end
+        inRedirect = flag
+    end
+    if not inRedirect then  -- 未在重定向列表里面
+        return false
+    end
+
+    loader.doRedirect_(result.redirectURL)
+    return true
+end
+
+function loader.checkInOpen_(result)
+    logFile("loader.checkInOpen_")
+    if result.openChannels and #result.openChannels > 0 then
+        local inChannels = false
+        for _,v in pairs(result.openChannels) do
+            if tonumber(v) == GAME_CHANNEL_ID then
+                inChannels = true
+                break
+            end
+        end
+        return inChannels
+    end
+    return true
+end
+
 function loader.checkVersionNumber_(result)
     logFile("loader.checkVersionNumber_")
     local newV = result.scriptVersion
     local currV = indexInfoCurr.scriptVersion
     local rawV = indexInfoRaw.scriptVersion
     logFile("check version: ", tostring(newV), tostring(currV), tostring(rawV))
+
+    if not loader.checkInOpen_(result) then
+        if not loader.checkRedirect_(result) then
+            loader.endWithEvent_(EVENTS.fail, "NOT IN OPEN OR REDIRECT")
+        end
+        return
+    end
 
     if result.mainVersion ~= indexInfoRaw.mainVersion then  -- 大版本不一致，直接返回
         logFile("mainVersion not equal ", tostring(result.mainVersion), tostring(indexInfoRaw.mainVersion))
@@ -504,7 +562,7 @@ function loader.downloadFiles_()
     
     DOWNLOAD_TASK_RUNNING = 0
 
-    if kCCNetworkStatusReachableViaWWAN == network.getInternetConnectionStatus() then  -- 数据网络下的提示下载
+    if not IS_REDIRECT and kCCNetworkStatusReachableViaWWAN == network.getInternetConnectionStatus() then  -- 数据网络下的提示下载
         local desc = versionInfoNew.desc or "发现新的资源包需要下载，建议您立即下载。"
         desc = desc .. string.format("\n大小：%sM", string.format("%0.1f", loader.totalSize_ / 1024 / 1024))
         device.showAlert("温馨提示", "", {"取消", "下载"}, function (event)
