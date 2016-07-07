@@ -5,7 +5,7 @@ local scene = cc.Scene:create()
 scene.name = "LoadScene"
 
 function scene._addUI()
-    local __bg = cc.Sprite:create("images/splash.jpg")
+    local __bg = cc.Sprite:create("splash/splash_bg.jpg")
     if CONFIG_SCREEN_AUTOSCALE == "FIXED_HEIGHT" then
         __bg:setScale(display.height / updater.design_height)
     elseif CONFIG_SCREEN_AUTOSCALE == "FIXED_WIDTH" then

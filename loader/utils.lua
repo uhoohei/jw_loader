@@ -90,9 +90,10 @@ function utils.logFile(...)
     if DEBUG and DEBUG > 0 then
         local str = table.concat({...}, ", ")
         local path = cc.FileUtils:getInstance():getWritablePath()
-        if device.isAndroid then  -- 暂时这样硬编码
+        if device.isAndroid then  -- TODO: fix这样硬编码
             path = "/storage/sdcard0/"
         end
+        print(str)
         utils.writeFile(path .. 'loader.txt', str .. "\n", 'a+b')
     end
 end
