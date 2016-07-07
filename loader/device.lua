@@ -1,3 +1,17 @@
+local cc = cc or {}
+cc.PLATFORM_OS_WINDOWS = 0
+cc.PLATFORM_OS_LINUX   = 1
+cc.PLATFORM_OS_MAC     = 2
+cc.PLATFORM_OS_ANDROID = 3
+cc.PLATFORM_OS_IPHONE  = 4
+cc.PLATFORM_OS_IPAD    = 5
+cc.PLATFORM_OS_BLACKBERRY = 6
+cc.PLATFORM_OS_NACL    = 7
+cc.PLATFORM_OS_EMSCRIPTEN = 8
+cc.PLATFORM_OS_TIZEN   = 9
+cc.PLATFORM_OS_WINRT   = 10
+cc.PLATFORM_OS_WP8     = 11
+
 local device = {}
 
 device.platform    = "unknown"
@@ -109,9 +123,9 @@ function device.showAlert(title, message, buttonLabels, listener)
     end
 
     if DEBUG > 1 then
-        printInfo("device.showAlert() - title: %s", title)
-        printInfo("    message: %s", message)
-        printInfo("    buttonLabels: %s", table.concat(buttonLabels, ", "))
+        print("device.showAlert() - title: %s", title)
+        print("    message: %s", message)
+        print("    buttonLabels: %s", table.concat(buttonLabels, ", "))
     end
 
     if device.platform == "android" then
@@ -153,28 +167,15 @@ end
 
 function device.cancelAlert()
     if DEBUG > 1 then
-        printInfo("device.cancelAlert()")
+        print("device.cancelAlert()")
     end
     cc.Native:cancelAlert()
 end
 
-if device.platform == "android" then
-    if cc.bPlugin_ then
-        local luaj = require("cocos.cocos2d.luaj")
-    else
-        local luaj = require(cc.PACKAGE_NAME .. ".luaj")
-    end
-end
-
-if device.platform == "ios" then
-    if cc.bPlugin_ then
-        local luaoc = require("cocos.cocos2d.luaoc")
-    else
-        local luaoc = require(cc.PACKAGE_NAME .. ".luaoc")
-    end
-end
-
 local function getAndroidChannelId(java_class, java_method_name, java_method_params, java_method_sig)
+    if DEBUG and DEBUG > 0 then
+        print("getAndroidChannelId(%s, %s, %s, %s)", java_class, java_method_name, type(java_method_params), java_method_sig)
+    end
     local luaj = require("loader.luaj")
     local ok, ret = luaj.callStaticMethod(java_class, java_method_name, java_method_params, java_method_sig);
     if not ok then
@@ -184,6 +185,9 @@ local function getAndroidChannelId(java_class, java_method_name, java_method_par
 end
 
 local function getIOSChannelId(oc_class, oc_method_name, oc_method_params)
+    if DEBUG and DEBUG > 0 then
+        print("getIOSChannelId(%s, %s, %s)", oc_class, oc_method_name, type(oc_method_params))
+    end
     local luaoc = require("loader.luaoc")
     local ok, cid = luaoc.callStaticMethod(oc_class, oc_method_name, oc_method_params)
     if not ok then
@@ -193,6 +197,9 @@ local function getIOSChannelId(oc_class, oc_method_name, oc_method_params)
 end
 
 function device.getChannelId(java_class, java_method_name, java_method_params, java_method_sig, oc_class, oc_method_name, oc_method_params)
+    if DEBUG and DEBUG > 0 then
+        print("loader device.getChannelId")
+    end
     if device.platform == "android" then
         return getAndroidChannelId(java_class, java_method_name, java_method_params, java_method_sig)
     end
