@@ -75,10 +75,8 @@ if device.platform == "windows" then
     device.pathSeparator = ";"
 end
 
-local PLATFORM_OS_ANDROID = 3
-local sharedApplication = cc.Application:getInstance()
-local target = sharedApplication:getTargetPlatform()
-device.isAndroid = (target == PLATFORM_OS_ANDROID)
+device.isAndroid = ("android" == device.platform)
+device.isIOS = ("ios" == device.platform)
 
 -- start --
 
@@ -172,41 +170,65 @@ function device.cancelAlert()
     cc.Native:cancelAlert()
 end
 
-local function getAndroidChannelId(java_class, java_method_name, java_method_params, java_method_sig)
+local function checknumber(value, base)
+    return tonumber(value, base) or 0
+end
+
+local function math.round(value)
+    value = checknumber(value)
+    return math.floor(value + 0.5)
+end
+
+local function checkint(value)
+    return math.round(checknumber(value))
+end
+
+local function callNativeAndroid(java_class, java_method_name, java_method_params, java_method_sig)
     if DEBUG and DEBUG > 0 then
-        print("getAndroidChannelId(%s, %s, %s, %s)", java_class, java_method_name, type(java_method_params), java_method_sig)
+        print("callNativeAndroid(%s, %s, %s, %s)", java_class, java_method_name, type(java_method_params), java_method_sig)
     end
     local luaj = require("loader.luaj")
-    local ok, ret = luaj.callStaticMethod(java_class, java_method_name, java_method_params, java_method_sig);
-    if not ok then
-        return 0
+    local ok, result = luaj.callStaticMethod(java_class, java_method_name, java_method_params, java_method_sig)
+    if ok then
+        return result
     end
-    return tonumber(ret)
 end
 
-local function getIOSChannelId(oc_class, oc_method_name, oc_method_params)
+local function callNativeIOS(oc_class, oc_method_name, oc_method_params)
     if DEBUG and DEBUG > 0 then
-        print("getIOSChannelId(%s, %s, %s)", oc_class, oc_method_name, type(oc_method_params))
+        print("callNativeIOS(%s, %s, %s)", oc_class, oc_method_name, type(oc_method_params))
     end
     local luaoc = require("loader.luaoc")
-    local ok, cid = luaoc.callStaticMethod(oc_class, oc_method_name, oc_method_params)
-    if not ok then
-        return 0
+    local ok, result = luaoc.callStaticMethod(oc_class, oc_method_name, oc_method_params)
+    if ok then
+        return result
     end
-    return tonumber(cid)
 end
 
-function device.getChannelId(java_class, java_method_name, java_method_params, java_method_sig, oc_class, oc_method_name, oc_method_params)
+function device.getChannelId(java_channel_params, oc_channel_params)
     if DEBUG and DEBUG > 0 then
         print("loader device.getChannelId")
     end
     if device.platform == "android" then
-        return getAndroidChannelId(java_class, java_method_name, java_method_params, java_method_sig)
+        return checkint(callNativeAndroid(unpack(java_channel_params)))
     end
     if device.platform == "ios" then
-        return getIOSChannelId(oc_class, oc_method_name, oc_method_params)
+        return checkint(callNativeIOS(unpack(oc_channel_params)))
     end
     return 0
+end
+
+function device.getEnvId(java_env_params, oc_env_params)
+    if DEBUG and DEBUG > 0 then
+        print("loader device.getEnvId")
+    end
+    if device.platform == "android" then
+        return callNativeAndroid(unpack(java_env_params))
+    end
+    if device.platform == "ios" then
+        return callNativeIOS(unpack(oc_env_params))
+    end
+    return ""
 end
 
 return device

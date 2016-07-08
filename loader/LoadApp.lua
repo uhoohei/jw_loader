@@ -40,13 +40,10 @@ function LoadApp:ctor(configs)
     assert(configs.design_width)
     assert(configs.design_height)
     assert(configs.seconds)
-    assert(configs.java_class)
-    assert(configs.java_method_name)
-    assert(configs.java_method_params)
-    assert(configs.java_method_sig)
-    assert(configs.oc_class)
-    assert(configs.oc_method_name)
-    assert(configs.oc_method_params)
+    assert(configs.java_channel_params)
+    assert(configs.java_env_params)
+    assert(configs.oc_channel_params)
+    assert(configs.oc_env_params)
     _G[appName] = self
     self.configs_ = configs
     self.preload_zips = configs.preload_zips
@@ -55,13 +52,10 @@ function LoadApp:ctor(configs)
     self.design_width = configs.design_width
     self.design_height = configs.design_height
     self.seconds = configs.seconds
-    self.java_class = configs.java_class
-    self.java_method_name = configs.java_method_name
-    self.java_method_params = configs.java_method_params
-    self.java_method_sig = configs.java_method_sig
-    self.oc_class = configs.oc_class
-    self.oc_method_name = configs.oc_method_name
-    self.oc_method_params = configs.oc_method_params
+    self.java_channel_params = configs.java_channel_params
+    self.java_env_params = configs.java_env_params
+    self.oc_channel_params = configs.oc_channel_params
+    self.oc_env_params = configs.oc_env_params
 end
 
 function LoadApp:run(checkNewUpdatePackage)

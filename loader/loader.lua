@@ -88,6 +88,7 @@ local DOWNLOAD_THREADS = 4  -- 同时下载的任务数
 local DOWNLOAD_SCHEDULER = nil  -- 下载的定时器
 local DOWNLOAD_TASK_RUNNING = 0  -- 正在进行的下载数量
 local GAME_CHANNEL_ID = 0   -- 游戏渠道ID
+local ENV_ID = nil  -- 当前所处环境信息
 local IS_REDIRECT = false   -- 重定向标志，当一定重定向后不可再次定向
 --------------------------------- CONFIG END ---------------------------------
 
@@ -114,13 +115,14 @@ function loader.init()
         logFile('loader.init fail with nil state')
         return
     end
-
-    GAME_CHANNEL_ID = device.getChannelId(updater.java_class, updater.java_method_name, 
-        updater.java_method_params, updater.java_method_sig, 
-        updater.oc_class, updater.oc_method_name, updater.oc_method_params)
-
-    logFile("init channel id: ", GAME_CHANNEL_ID)
     logFile(updater.work_path)
+
+    GAME_CHANNEL_ID = device.getChannelId(updater.java_channel_params, updater.oc_channel_params)
+    logFile("init channel id: ", GAME_CHANNEL_ID)
+
+    ENV_ID = device.getEnvId(updater.java_env_params, updater.oc_env_params)
+    logFile("init env id: ", ENV_ID)
+
     local ok, err = mkdir(updater.work_path, true)
     logFile(tostring(ok))
     logFile(tostring(err))
@@ -248,6 +250,13 @@ function loader.update(handler)
 
     removeFile(loader.indexFileOfNew())
 
+    if indexInfoRaw.envId ~= ENV_ID then  -- 编译资源索引的环境ID与native的环境ID不匹配
+        loader.endWithEvent_(EVENTS.fail, "raw env id not equal ENV_ID")
+    end
+    if not device.isAndroid and not device.isIOS then
+        loader.endWithEvent_(EVENTS.fail, "loader not support this platform.")
+    end
+
     loader.setState_(STATES.downVersion)
     loader.onProgress_(0)
     loader.downVersion_()
@@ -309,9 +318,9 @@ end
 
 -- 下载version.txt文件
 function loader.downVersion_(url)
-    logFile("loader.downVersion_()")
+    logFile("loader.downVersion_()", url)
     assert(loader.state_ == STATES.downVersion)
-    local url = loader.getVersionURL_() .. '?' .. os.time()
+    local url = (url or loader.getVersionURL_()) .. '?' .. os.time()
     logFile("down url: ", url)
     if not url then
         loader.endWithEvent_(EVENTS.fail, 'get Version URL fail')
@@ -400,6 +409,10 @@ function loader.checkVersionNumber_(result)
     local currV = indexInfoCurr.scriptVersion
     local rawV = indexInfoRaw.scriptVersion
     logFile("check version: ", tostring(newV), tostring(currV), tostring(rawV))
+
+    if result.envId ~= ENV_ID then
+        loader.endWithEvent_(EVENTS.fail, "result.envId not equal ENV_ID")
+    end
 
     if not loader.checkInOpen_(result) then
         if not loader.checkRedirect_(result) then
