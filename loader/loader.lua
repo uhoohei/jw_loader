@@ -243,18 +243,18 @@ function loader.update(handler)
     downloadList = {}  -- 清空下载列表
     loader.updateHandler_ = handler
     loader.setState_(STATES.start)
+
+    if not device.isAndroid and not device.isIOS then
+        return loader.endWithEvent_(EVENTS.fail, "LOADER NOT SUPPORT THIS PLATFORM.")
+    end
     if not indexInfoCurr.scriptVersion and not indexInfoRaw.scriptVersion then
-        loader.endWithEvent_(EVENTS.fail, 'No version Info or not init!')
-        return
+        return loader.endWithEvent_(EVENTS.fail, 'No version Info or not init!')
     end
 
     removeFile(loader.indexFileOfNew())
 
     if indexInfoRaw.envId ~= ENV_ID then  -- 编译资源索引的环境ID与native的环境ID不匹配
-        loader.endWithEvent_(EVENTS.fail, "raw env id not equal ENV_ID")
-    end
-    if not device.isAndroid and not device.isIOS then
-        loader.endWithEvent_(EVENTS.fail, "loader not support this platform.")
+        return loader.endWithEvent_(EVENTS.fail, "raw env id not equal ENV_ID")
     end
 
     loader.setState_(STATES.downVersion)
@@ -308,8 +308,7 @@ end
 function loader.doRedirect_(redirectURL)
     logFile("loader.doRedirect_", redirectURL)
     if IS_REDIRECT then
-        loader.endWithEvent_(EVENTS.fail, "CAN'T REDIRECT IN REDIRECT")
-        return
+        return loader.endWithEvent_(EVENTS.fail, "CAN'T REDIRECT IN REDIRECT")
     end
     IS_REDIRECT = true
     loader.setState_(STATES.downVersion)
@@ -323,14 +322,13 @@ function loader.downVersion_(url)
     local url = (url or loader.getVersionURL_()) .. '?' .. os.time()
     logFile("down url: ", url)
     if not url then
-        loader.endWithEvent_(EVENTS.fail, 'get Version URL fail')
-        return
+        return loader.endWithEvent_(EVENTS.fail, 'get Version URL fail')
     end
     
     local function failFunc()
         logFile("download version fail")
         loader.setState_(STATES.downVersionEnd)
-        loader.endWithEvent_(EVENTS.fail, 'download version fail')
+        return loader.endWithEvent_(EVENTS.fail, 'download version fail')
     end
     
     local function sucFunc(data)
@@ -342,8 +340,7 @@ function loader.downVersion_(url)
         loader.setState_(STATES.downVersionEnd)
         local result = json.decode(data)
         if not result or not result.scriptVersion or not result.mainVersion then
-            loader.endWithEvent_(EVENTS.fail, 'decode version file fail')
-            return
+            return loader.endWithEvent_(EVENTS.fail, 'decode version file fail')
         end
 
         versionInfoNew = result
@@ -411,7 +408,7 @@ function loader.checkVersionNumber_(result)
     logFile("check version: ", tostring(newV), tostring(currV), tostring(rawV))
 
     if result.envId ~= ENV_ID then
-        loader.endWithEvent_(EVENTS.fail, "result.envId not equal ENV_ID")
+        return loader.endWithEvent_(EVENTS.fail, "result.envId not equal ENV_ID")
     end
 
     if not loader.checkInOpen_(result) then
@@ -430,15 +427,13 @@ function loader.checkVersionNumber_(result)
 
     if result.mainVersion ~= indexInfoRaw.mainVersion then  -- 大版本不一致，直接返回
         logFile("mainVersion not equal ", tostring(result.mainVersion), tostring(indexInfoRaw.mainVersion))
-        loader.endWithEvent_(EVENTS.fail, 'MAIN VERSION IS NOT EQUAL!')
-        return
+        return loader.endWithEvent_(EVENTS.fail, 'MAIN VERSION IS NOT EQUAL!')
     end
 
     if result.gameId ~= indexInfoRaw.gameId or 
         result.branchId ~= indexInfoRaw.branchId then
         logFile("params check fail ")
-        loader.endWithEvent_(EVENTS.fail, 'PARAMS CHECK FAIL!')
-        return
+        return loader.endWithEvent_(EVENTS.fail, 'PARAMS CHECK FAIL!')
     end
 
     if currV then
@@ -453,7 +448,7 @@ function loader.checkVersionNumber_(result)
         return
     end
 
-    loader.onSuccess_(SUCCESS_TYPES.noNewVersion)
+    return loader.onSuccess_(SUCCESS_TYPES.noNewVersion)
 end
 
 function loader.downloadIndexFile_(result)
@@ -463,21 +458,19 @@ function loader.downloadIndexFile_(result)
     local function failFunc()
         logFile("download index fail")
         loader.setState_(STATES.downIndexEnd)
-        loader.endWithEvent_(EVENTS.fail, 'download index file fail')
+        return loader.endWithEvent_(EVENTS.fail, 'download index file fail')
     end
     local function sucFunc(file)
         logFile("download index suc", file)
         loader.setState_(STATES.downIndexEnd)
         if crypto.md5file(file) ~= result.indexSign then
-            loader.endWithEvent_(EVENTS.fail, 'check new index file sign fail')
-            return
+            return loader.endWithEvent_(EVENTS.fail, 'check new index file sign fail')
         end
 
         local data = readFile(file)
         local indexNew = json.decode(data)
         if not indexNew or not indexNew.scriptVersion then
-            loader.endWithEvent_(EVENTS.fail, 'decode new index file fail')
-            return
+            return loader.endWithEvent_(EVENTS.fail, 'decode new index file fail')
         end
 
         indexInfoNew = indexNew
@@ -594,7 +587,7 @@ function loader.downloadFiles_()
         desc = desc .. string.format("\n大小：%sM", string.format("%0.1f", loader.totalSize_ / 1024 / 1024))
         device.showAlert("温馨提示", "", {"取消", "下载"}, function (event)
             if event.buttonIndex == 1 then  -- 取消
-                loader.endWithEvent_(EVENTS.fail, "user cancel in WWAN.")
+                return loader.endWithEvent_(EVENTS.fail, "user cancel in WWAN.")
             else -- 下载
                 loader.startCheckScheduler_()
             end
@@ -711,9 +704,9 @@ function loader.onDownloadFinish_(desc)
     if tableCount(downFailList) == 0 then  -- 下载完成且没有失败的
         loader.overWriteCurrFiles_()
         indexInfoCurr = indexInfoNew
-        loader.onSuccess_(SUCCESS_TYPES.updateSuccess)
+        return loader.onSuccess_(SUCCESS_TYPES.updateSuccess)
     else
-        loader.endWithEvent_(EVENTS.fail, ERRORS.unknown)
+        return loader.endWithEvent_(EVENTS.fail, ERRORS.unknown)
     end
 end
 

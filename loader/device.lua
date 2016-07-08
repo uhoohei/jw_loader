@@ -174,13 +174,13 @@ local function checknumber(value, base)
     return tonumber(value, base) or 0
 end
 
-local function math.round(value)
+local function round(value)
     value = checknumber(value)
     return math.floor(value + 0.5)
 end
 
 local function checkint(value)
-    return math.round(checknumber(value))
+    return round(checknumber(value))
 end
 
 local function callNativeAndroid(java_class, java_method_name, java_method_params, java_method_sig)
