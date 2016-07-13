@@ -118,6 +118,7 @@ function loader.init()
     logFile(updater.work_path)
 
     GAME_CHANNEL_ID = device.getChannelId(updater.java_channel_params, updater.oc_channel_params)
+    GAME_CHANNEL_ID = math.max(GAME_CHANNEL_ID, 1)
     logFile("init channel id: ", GAME_CHANNEL_ID)
 
     ENV_ID = device.getEnvId(updater.java_env_params, updater.oc_env_params)
@@ -222,7 +223,7 @@ function loader.checkNetwork_(handler)
     if network.isInternetConnectionAvailable() then
         return true
     end
-
+    logFile("before device.showAlert")
     device.showAlert("网络错误", "当前无可用的网络连接，请检查后再重试！", {"重试"}, function ()
         loader.update(handler)
     end)
@@ -233,6 +234,7 @@ function loader.update(handler)
     logFile("loader.update(handler)")
     assert(handler)
     if not loader.checkNetwork_(handler) then
+        logFile("if not loader.checkNetwork_(handler) then")
         return
     end
     if loader.state_ ~= STATES.init and loader.state_ ~= STATES.isEnd then

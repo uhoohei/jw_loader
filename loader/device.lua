@@ -78,6 +78,22 @@ end
 device.isAndroid = ("android" == device.platform)
 device.isIOS = ("ios" == device.platform)
 
+local luaj
+if device.isAndroid then
+    luaj = require("loader.luaj")
+end
+
+local luaoc
+if device.isIOS then
+    luaoc = require("loader.luaoc")
+end
+
+local function table_map(t, fn)
+    for k, v in pairs(t) do
+        t[k] = fn(v, k)
+    end
+end
+
 -- start --
 
 --------------------------------
@@ -117,7 +133,7 @@ function device.showAlert(title, message, buttonLabels, listener)
     if type(buttonLabels) ~= "table" then
         buttonLabels = {tostring(buttonLabels)}
     else
-        table.map(buttonLabels, function(v) return tostring(v) end)
+        table_map(buttonLabels, function(v) return tostring(v) end)
     end
 
     if DEBUG > 1 then
@@ -129,7 +145,7 @@ function device.showAlert(title, message, buttonLabels, listener)
     if device.platform == "android" then
         local tempListner = function(event)
             if type(event) == "string" then
-                event = require("framework.json").decode(event)
+                event = require("loader.json").decode(event)
                 event.buttonIndex = tonumber(event.buttonIndex)
             end
             if listener then listener(event) end
@@ -187,7 +203,6 @@ local function callNativeAndroid(java_class, java_method_name, java_method_param
     if DEBUG and DEBUG > 0 then
         print("callNativeAndroid(%s, %s, %s, %s)", java_class, java_method_name, type(java_method_params), java_method_sig)
     end
-    local luaj = require("loader.luaj")
     local ok, result = luaj.callStaticMethod(java_class, java_method_name, java_method_params, java_method_sig)
     if ok then
         return result
@@ -198,7 +213,6 @@ local function callNativeIOS(oc_class, oc_method_name, oc_method_params)
     if DEBUG and DEBUG > 0 then
         print("callNativeIOS(%s, %s, %s)", oc_class, oc_method_name, type(oc_method_params))
     end
-    local luaoc = require("loader.luaoc")
     local ok, result = luaoc.callStaticMethod(oc_class, oc_method_name, oc_method_params)
     if ok then
         return result
