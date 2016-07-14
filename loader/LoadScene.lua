@@ -20,6 +20,19 @@ function scene._addUI()
     display.align(__label, display.CENTER, display.cx, display.bottom + 60)
     scene:addChild(__label, 10)
 
+    local x, y = display.cx, display.cy - 130
+    local bg = cc.Sprite:create("splash/loading_bar_bg.png")
+    bg:setPosition(x, y)
+    scene:addChild(bg, 9)
+
+    local progress = cc.ProgressTimer:create(cc.Sprite:create("splash/loading_bar.png"))
+    progress:setType(1)
+    progress:setMidpoint({0, 0.5})
+    progress:setBarChangeRate({1, 0})
+    progress:setPosition(x, y)
+    scene:addChild(progress, 10)
+    scene.progress_ = progress
+
     scene.labelDebug_ = cc.LabelTTF:create("", "Arial", 22)
     scene.labelDebug_:setColor(display.c3b(50, 50, 50))
     display.align(scene.labelDebug_, display.CENTER, display.cx, display.bottom + 30)
@@ -54,10 +67,12 @@ function scene._updateHandler(event, ...)
         scene.labelDebug_:setString(str)
     end
     if event == "success" or event == "fail" then
+        scene.progress_:setPercentage(100)
         scene.enterGameApp()
     elseif event == 'progress' then
         local str = string.format("载入中... %s％", tostring(vars[1]))
         scene._label:setString(str)
+        scene.progress_:setPercentage(vars[1])
     end
 end
 
