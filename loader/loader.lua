@@ -353,7 +353,7 @@ function loader.downVersion_(url)
 end
 
 local function isNew__(newV, compV)
-    return checkint(newV) ~= checkint(compV)
+    return checkint(newV) > checkint(compV)
 end
 
 function loader.isMatchRedirectList_(result)
