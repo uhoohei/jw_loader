@@ -56,6 +56,10 @@ function LoadApp:ctor(configs)
     self.java_env_params = configs.java_env_params
     self.oc_channel_params = configs.oc_channel_params
     self.oc_env_params = configs.oc_env_params
+    
+    self.bg_sprite_name = configs.bg_sprite_name
+    self.progress_bg_name = configs.progress_bg_name
+    self.progress_fg_name = configs.progress_fg_name
 end
 
 function LoadApp:run(checkNewUpdatePackage)
