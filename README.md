@@ -1,5 +1,5 @@
 # jw_loader
-基于 quick-cocos2d-x 3.3 的热更新小项目
+基于 quick-cocos2d-x 3.3 lua 的热更新小项目, 无需对引擎进行改造， 小巧简洁，无需强后台支持，支持按渠道开放更新，android与ios真机测试通过！
 
 # 运行条件
 quick-cocos2d-x 3.3 版本（3.6社区版未测试，理论上也可以）的android或IOS真机
