@@ -49,6 +49,7 @@ function LoadApp:ctor(configs)
     self.preload_zips = configs.preload_zips
     self.app_entrance = configs.app_entrance
     self.work_path = configs.work_path
+    self.slient_size = configs.slient_size or 2 * 1024 * 1024
     self.design_width = configs.design_width
     self.design_height = configs.design_height
     self.seconds = configs.seconds

@@ -584,7 +584,8 @@ function loader.downloadFiles_()
     
     DOWNLOAD_TASK_RUNNING = 0
 
-    if not IS_REDIRECT and kCCNetworkStatusReachableViaWWAN == network.getInternetConnectionStatus() then  -- 数据网络下的提示下载
+    if kCCNetworkStatusReachableViaWWAN == network.getInternetConnectionStatus() and 
+        loader.totalSize_ > updater.slient_size then   -- 数据网络下的提示下载
         local desc = versionInfoNew.desc or "发现新的资源包需要下载，建议您立即下载。"
         desc = desc .. string.format("\n大小：%sM", string.format("%0.1f", loader.totalSize_ / 1024 / 1024))
         device.showAlert("温馨提示", desc, {"取消", "下载"}, function (event)
