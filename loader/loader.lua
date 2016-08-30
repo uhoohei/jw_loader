@@ -129,8 +129,8 @@ function loader.init()
     logFile(tostring(err))
     
     loader.setState_(STATES.init)
-    loader.loadCurrIndex_()
     loader.loadRawIndex_()
+    loader.loadCurrIndex_()
 end
 
 function loader.loadRawIndex_()
@@ -151,6 +151,14 @@ function loader.loadCurrIndex_()
         return
     end
     indexInfoCurr = content
+    local currV = checkint(indexInfoCurr.scriptVersion)
+    local rawV = checkint(indexInfoRaw.scriptVersion)
+    if rawV >= currV then
+        indexInfoCurr = {}
+        removeFile(loader.indexFileOfCurr())
+        logFile("loader.loadCurrIndex_() rawV >= currV")
+    end
+
     return true
 end
 
