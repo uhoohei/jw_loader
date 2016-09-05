@@ -263,10 +263,6 @@ function loader.update(handler)
 
     removeFile(loader.indexFileOfNew())
 
-    if indexInfoRaw.envId ~= ENV_ID then  -- 编译资源索引的环境ID与native的环境ID不匹配
-        return loader.endWithEvent_(EVENTS.fail, "raw env id not equal ENV_ID")
-    end
-
     loader.setState_(STATES.downVersion)
     loader.onProgress_(0)
     loader.downVersion_()
