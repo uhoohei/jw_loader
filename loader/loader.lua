@@ -87,9 +87,6 @@ local UPDATE_PACKAGE_INDEX = "loader%s.zip"  -- 更新包的索引名称, 这里
 local DOWNLOAD_THREADS = 4  -- 同时下载的任务数
 local DOWNLOAD_SCHEDULER = nil  -- 下载的定时器
 local DOWNLOAD_TASK_RUNNING = 0  -- 正在进行的下载数量
-local GAME_CHANNEL_ID = 0   -- 游戏渠道ID
-local ENV_ID = nil  -- 当前所处环境信息
-local IS_REDIRECT = false   -- 重定向标志，当一定重定向后不可再次定向
 --------------------------------- CONFIG END ---------------------------------
 
 
@@ -118,13 +115,6 @@ function loader.init(zip64)
         return
     end
     logFile(updater.work_path)
-
-    GAME_CHANNEL_ID = device.getChannelId(updater.java_channel_params, updater.oc_channel_params)
-    GAME_CHANNEL_ID = math.max(GAME_CHANNEL_ID, 1)
-    logFile("init channel id: ", GAME_CHANNEL_ID)
-
-    ENV_ID = device.getEnvId(updater.java_env_params, updater.oc_env_params)
-    logFile("init env id: ", ENV_ID)
 
     local ok, err = mkdir(updater.work_path, true)
     logFile(tostring(ok))
@@ -313,16 +303,6 @@ function loader.clean()
     loader.doingList_ = {}
 end
 
-function loader.doRedirect_(redirectURL)
-    logFile("loader.doRedirect_", redirectURL)
-    if IS_REDIRECT then
-        return loader.endWithEvent_(EVENTS.fail, "CAN'T REDIRECT IN REDIRECT")
-    end
-    IS_REDIRECT = true
-    loader.setState_(STATES.downVersion)
-    loader.downVersion_(redirectURL)
-end
-
 -- 下载version.txt文件
 function loader.downVersion_(url)
     logFile("loader.downVersion_()", url)
@@ -362,76 +342,12 @@ local function isNew__(newV, compV)
     return checkint(newV) > checkint(compV)
 end
 
-function loader.isMatchRedirectList_(result)
-    if not result or not result.redirectChannels then
-        return false
-    end
-    local flag = false
-    for _,v in pairs(result.redirectChannels) do
-        if tonumber(v) == GAME_CHANNEL_ID then
-            flag = true
-            break
-        end
-    end
-    return flag
-end
-
-function loader.checkRedirect_(result)
-    logFile("loader.checkRedirect_")
-    if not result.redirectURL or string.len(result.redirectURL) < 8 then  -- 没有跳转链接
-        return false
-    end
-    local inRedirect = true
-    if result.redirectChannels and #result.redirectChannels > 0 then
-        inRedirect = loader.isMatchRedirectList_(result)
-    end
-    if not inRedirect then  -- 未在重定向列表里面
-        return false
-    end
-
-    loader.doRedirect_(result.redirectURL)
-    return true
-end
-
-function loader.checkInOpen_(result)
-    logFile("loader.checkInOpen_")
-    if result.openChannels and #result.openChannels > 0 then
-        local inChannels = false
-        for _,v in pairs(result.openChannels) do
-            if tonumber(v) == GAME_CHANNEL_ID then
-                inChannels = true
-                break
-            end
-        end
-        return inChannels
-    end
-    return true
-end
-
 function loader.checkVersionNumber_(result)
     logFile("loader.checkVersionNumber_")
     local newV = result.scriptVersion
     local currV = indexInfoCurr.scriptVersion
     local rawV = indexInfoRaw.scriptVersion
     logFile("check version: ", tostring(newV), tostring(currV), tostring(rawV))
-
-    if result.envId ~= ENV_ID then
-        return loader.endWithEvent_(EVENTS.fail, "result.envId not equal ENV_ID")
-    end
-
-    if not loader.checkInOpen_(result) then
-        if not loader.checkRedirect_(result) then
-            loader.endWithEvent_(EVENTS.fail, "NOT IN OPEN OR REDIRECT")
-        end
-        return
-    end
-
-    if loader.isMatchRedirectList_(result) then
-        if not loader.checkRedirect_(result) then
-            loader.endWithEvent_(EVENTS.fail, "NOT IN OPEN OR REDIRECT")
-        end
-        return
-    end
 
     if result.mainVersion ~= indexInfoRaw.mainVersion then  -- 大版本不一致，直接返回
         logFile("mainVersion not equal ", tostring(result.mainVersion), tostring(indexInfoRaw.mainVersion))

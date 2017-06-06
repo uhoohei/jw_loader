@@ -40,10 +40,6 @@ function LoadApp:ctor(configs)
     assert(configs.design_width)
     assert(configs.design_height)
     assert(configs.seconds)
-    assert(configs.java_channel_params)
-    assert(configs.java_env_params)
-    assert(configs.oc_channel_params)
-    assert(configs.oc_env_params)
     _G[appName] = self
     self.configs_ = configs
     self.preload_zips = configs.preload_zips
@@ -53,10 +49,6 @@ function LoadApp:ctor(configs)
     self.design_width = configs.design_width
     self.design_height = configs.design_height
     self.seconds = configs.seconds
-    self.java_channel_params = configs.java_channel_params
-    self.java_env_params = configs.java_env_params
-    self.oc_channel_params = configs.oc_channel_params
-    self.oc_env_params = configs.oc_env_params
     
     self.bg_sprite_name = configs.bg_sprite_name
     self.progress_bg_name = configs.progress_bg_name
