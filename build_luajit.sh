@@ -1,0 +1,22 @@
+#!/bin/sh
+
+LOADER_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+LOADER_SCRIPTS_DIR=$LOADER_DIR/.
+LOADER_DEST_DIR=$LOADER_DIR/.
+LOADER_TARGET_FILE=loader
+
+LOADER_COMPILE_BIN=$QUICK_V3_ROOT/quick/bin/compile_scripts.sh
+
+ENCRYPT_COMMAND=""
+if [ $1 ]; then
+    ENCRYPT_COMMAND=" -e xxtea_zip -ek $1 -es RSA "
+fi
+
+# 编译游戏脚本文件
+file32=$LOADER_DEST_DIR/$LOADER_TARGET_FILE"32.zip"
+file64=$LOADER_DEST_DIR/$LOADER_TARGET_FILE"64.zip"
+
+rm -f $file32
+rm -f $file64
+$LOADER_COMPILE_BIN -b 32 -i $LOADER_SCRIPTS_DIR -o $file32 $ENCRYPT_COMMAND
+$LOADER_COMPILE_BIN -b 64 -i $LOADER_SCRIPTS_DIR -o $file64 $ENCRYPT_COMMAND

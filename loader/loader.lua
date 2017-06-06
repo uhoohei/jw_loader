@@ -83,7 +83,7 @@ local CURRENT_SUFFIX = ".curr"  -- 当前启用版本所用的后缀
 local NEW_SUFFIX = ".new"  -- 正在更新中的版本的后缀，如果此类文件存在，说明上一次的更新未完成
 local VERSION_FILE_NAME = "version.txt"  -- 其实是json，这里只是为了防止运营商劫持所修改的后缀
 local INDEX_FILE_NAME = "resindex.txt"  -- 其实是json，这里只是为了防止运营商劫持所修改的后缀
-local UPDATE_PACKAGE_INDEX = "loader.zip"  -- 更新包的索引名称, 这里是为了能更新自身而放在这里的
+local UPDATE_PACKAGE_INDEX = "loader%s.zip"  -- 更新包的索引名称, 这里是为了能更新自身而放在这里的
 local DOWNLOAD_THREADS = 4  -- 同时下载的任务数
 local DOWNLOAD_SCHEDULER = nil  -- 下载的定时器
 local DOWNLOAD_TASK_RUNNING = 0  -- 正在进行的下载数量
@@ -109,7 +109,9 @@ function loader.indexFileOfNew()
     return updater.work_path .. INDEX_FILE_NAME .. NEW_SUFFIX
 end
 
-function loader.init()
+function loader.init(zip64)
+    local str64 = zip64 or ""
+    UPDATE_PACKAGE_INDEX = string.format(UPDATE_PACKAGE_INDEX, zip64)
     logFile('loader.init')
     if nil ~= loader.state_ then
         logFile('loader.init fail with nil state')

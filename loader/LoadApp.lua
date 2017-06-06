@@ -61,10 +61,11 @@ function LoadApp:ctor(configs)
     self.bg_sprite_name = configs.bg_sprite_name
     self.progress_bg_name = configs.progress_bg_name
     self.progress_fg_name = configs.progress_fg_name
+    self.zip64 = configs.zip64
 end
 
 function LoadApp:run(checkNewUpdatePackage)
-    loader.init()
+    loader.init(self.zip64)
     local newLoaderPath = loader.hasNewUpdatePackage()
     print("LoadApp.run(%s)", checkNewUpdatePackage)
     if checkNewUpdatePackage and newLoaderPath then
