@@ -9,9 +9,9 @@ function scene._addUI()
     if bg_sprite_name and string.len(bg_sprite_name) > 0 then
         local __bg = cc.Sprite:create(bg_sprite_name)
         if CONFIG_SCREEN_AUTOSCALE == "FIXED_HEIGHT" then
-            __bg:setScale(display.height / updater.design_height)
-        elseif CONFIG_SCREEN_AUTOSCALE == "FIXED_WIDTH" then
             __bg:setScale(display.width / updater.design_width)
+        elseif CONFIG_SCREEN_AUTOSCALE == "FIXED_WIDTH" then
+            __bg:setScale(display.height / updater.design_height)
         end
         display.align(__bg, display.CENTER, display.cx, display.cy)
         scene:addChild(__bg, 0)
