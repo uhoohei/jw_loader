@@ -18,26 +18,6 @@ local function string_split(input, delimiter)
     return arr
 end
 
--- Content-Type: text/html; charset=utf-8
--- Content-Type: text/html; charset=gb2312
-local function isGBK(header)
-    local headers = string_split(header, "\r\n")
-    if type(headers) ~= 'table' then
-        return false
-    end
-    for _,v in pairs(headers) do
-        if nil ~= string.find(string.lower(v), 'content-type') then
-            if nil ~= string.find(string.lower(v), 'gb2312') then
-                return true
-            end
-            if nil ~= string.find(string.lower(v), 'gbk') then
-                return true
-            end
-        end
-    end
-    return false
-end
-
 local function onRequestFinished(event, sucFunc, failFunc)
     local ok = (event.name == "completed")
     local request = event.request
@@ -61,13 +41,7 @@ local function onRequestFinished(event, sucFunc, failFunc)
         return
     end
 
-    local isGbk = isGBK(request:getResponseHeadersString())
-    -- 请求成功
     local response = request:getResponseString()
-    if isGbk then
-        local gbk = require("gbk")
-        response = gbk.toutf8(response)
-    end
     if sucFunc then
         sucFunc(response)
     end
