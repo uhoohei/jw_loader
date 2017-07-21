@@ -9,7 +9,6 @@ local utils = require("loader.utils")
 local print_r = utils.print_r
 local checkint = utils.checkint
 local writeFile = utils.writeFile
-local logFile = utils.logFile
 local removeFile = utils.removeFile
 local renameFile = utils.renameFile
 local rmdir = utils.rmdir
@@ -106,18 +105,17 @@ function loader.indexFileOfNew()
 end
 
 function loader.init(zip64)
+    utils.logFile('loader.init', zip64)
     local str64 = zip64 or ""
     UPDATE_PACKAGE_INDEX = string.format(UPDATE_PACKAGE_INDEX, zip64)
-    logFile('loader.init')
     if nil ~= loader.state_ then
-        logFile('loader.init fail with nil state')
+        utils.logFile('loader.init fail with nil state')
         return
     end
-    logFile(updater.work_path)
+    utils.logFile(updater.work_path)
 
     local ok, err = mkdir(updater.work_path, true)
-    logFile(tostring(ok))
-    logFile(tostring(err))
+    utils.logFile("mkdir", ok, err)
     
     loader.setState_(STATES.init)
     loader.loadRawIndex_()
@@ -125,10 +123,10 @@ function loader.init(zip64)
 end
 
 function loader.loadRawIndex_()
-    logFile("loader.loadRawIndex_()", INDEX_FILE_NAME)
+    utils.logFile("loader.loadRawIndex_()", INDEX_FILE_NAME)
     local content = json.decode(readResFile(INDEX_FILE_NAME))
     if not content then
-        logFile("error: ", ERRORS.rawIndexReadFail)
+        utils.logFile("error: ", ERRORS.rawIndexReadFail)
         return
     end
     indexInfoRaw = content
@@ -136,7 +134,7 @@ function loader.loadRawIndex_()
 end
 
 function loader.loadCurrIndex_()
-    logFile("loader.loadCurrIndex_()", loader.indexFileOfCurr())
+    utils.logFile("loader.loadCurrIndex_()", loader.indexFileOfCurr())
     local content = loadJsonFile(loader.indexFileOfCurr())
     if not content then
         return
@@ -147,19 +145,21 @@ function loader.loadCurrIndex_()
     if rawV >= currV then
         indexInfoCurr = {}
         removeFile(loader.indexFileOfCurr())
-        logFile("loader.loadCurrIndex_() rawV >= currV")
+        utils.logFile("loader.loadCurrIndex_() rawV >= currV")
     end
 
     return true
 end
 
 function loader.setState_(state)
+    utils.logFile("loader.setState_", state)
     assert(state)
     loader.state_ = state
     loader.onState_(state)
 end
 
 function loader.getVersionURL_()
+    utils.logFile("loader.getVersionURL_()")
     if indexInfoCurr and indexInfoCurr.versionURL then
         return indexInfoCurr.versionURL
     end
@@ -169,11 +169,11 @@ function loader.getVersionURL_()
 end
 
 function loader.checkNetwork_(handler)
-    logFile("loader.checkNetwork_")
+    utils.logFile("loader.checkNetwork_")
     if network.isInternetConnectionAvailable() then
         return true
     end
-    logFile("before device.showAlert")
+    utils.logFile("before device.showAlert")
     device.showAlert("网络错误", "当前无可用的网络连接，请检查后再重试！", {"重试"}, function ()
         loader.update(handler)
     end)
@@ -181,10 +181,10 @@ function loader.checkNetwork_(handler)
 end
 
 function loader.update(handler)
-    logFile("loader.update(handler)")
+    utils.logFile("loader.update(handler)")
     assert(handler)
     if not loader.checkNetwork_(handler) then
-        logFile("if not loader.checkNetwork_(handler) then")
+        utils.logFile("if not loader.checkNetwork_(handler) then")
         return
     end
     if loader.state_ ~= STATES.init and loader.state_ ~= STATES.isEnd then
@@ -211,7 +211,7 @@ function loader.update(handler)
 end
 
 function loader.endWithEvent_(event, ...)
-    logFile("loader.endWithEvent_", event, ...)
+    utils.logFile("loader.endWithEvent_", event, ...)
     loader.onProgress_(100)
     if indexInfoCurr and indexInfoCurr.scriptVersion then  -- 启用目录
         cc.FileUtils:getInstance():addSearchPath(loader.getCurrPath_(), true)
@@ -222,29 +222,29 @@ function loader.endWithEvent_(event, ...)
 end
 
 function loader.onSuccess_(sucType)
-    logFile("loader.onSuccess_: ", sucType)
+    utils.logFile("loader.onSuccess_: ", sucType)
     loader.endWithEvent_(EVENTS.success, sucType)
 end
 
 function loader.onFail_(message)
-    logFile("loader.onFail_: ", message)
+    utils.logFile("loader.onFail_: ", message)
     loader.updateHandler_(EVENTS.fail, message)
 end
 
 function loader.onProgress_(percent)
-    logFile("loader.onProgress_: ", percent)
+    utils.logFile("loader.onProgress_: ", percent)
     loader.updateHandler_(EVENTS.progress, percent)
 end
 
 function loader.onState_(state)
-    logFile("loader.onState_: ", state)
+    utils.logFile("loader.onState_: ", state)
     if loader.updateHandler_ then
         loader.updateHandler_(EVENTS.state, state)
     end
 end
 
 function loader.clean()
-    logFile("loader.clean")
+    utils.logFile("loader.clean")
     loader.stopCheckScheduler_()
     loader.state_ = nil
     indexInfoCurr = {}
@@ -255,22 +255,22 @@ end
 
 -- 下载version.txt文件
 function loader.downVersion_(url)
-    logFile("loader.downVersion_()", url)
+    utils.logFile("loader.downVersion_()", url)
     assert(loader.state_ == STATES.downVersion)
     local url = (url or loader.getVersionURL_()) .. '?' .. os.time()
-    logFile("down url: ", url)
+    utils.logFile("down url: ", url)
     if not url then
         return loader.endWithEvent_(EVENTS.fail, 'get Version URL fail')
     end
     
     local function failFunc()
-        logFile("download version fail")
+        utils.logFile("download version fail")
         loader.setState_(STATES.downVersionEnd)
         return loader.endWithEvent_(EVENTS.fail, 'download version fail')
     end
     
     local function sucFunc(data)
-        logFile("download version file success.")
+        utils.logFile("download version file success.")
         if not data or string.len(data) < 2 then
             failFunc()
             return
@@ -293,31 +293,31 @@ local function isNew__(newV, compV)
 end
 
 function loader.checkVersionNumber_(result)
-    logFile("loader.checkVersionNumber_")
+    utils.logFile("loader.checkVersionNumber_")
     local newV = result.scriptVersion
     local currV = indexInfoCurr.scriptVersion
     local rawV = indexInfoRaw.scriptVersion
-    logFile("check version: ", tostring(newV), tostring(currV), tostring(rawV))
+    utils.logFile("check version: ", tostring(newV), tostring(currV), tostring(rawV))
 
     if result.mainVersion ~= indexInfoRaw.mainVersion then  -- 大版本不一致，直接返回
-        logFile("mainVersion not equal ", tostring(result.mainVersion), tostring(indexInfoRaw.mainVersion))
+        utils.logFile("mainVersion not equal ", tostring(result.mainVersion), tostring(indexInfoRaw.mainVersion))
         return loader.endWithEvent_(EVENTS.fail, 'MAIN VERSION IS NOT EQUAL!')
     end
 
     if result.gameId ~= indexInfoRaw.gameId or 
         result.branchId ~= indexInfoRaw.branchId then
-        logFile("params check fail ")
+        utils.logFile("params check fail ")
         return loader.endWithEvent_(EVENTS.fail, 'PARAMS CHECK FAIL!')
     end
 
     if currV then
         if isNew__(newV, currV) then
-            logFile("goto downloadIndexFile_ by currV")
+            utils.logFile("goto downloadIndexFile_ by currV")
             loader.downloadIndexFile_(result)
             return
         end
     elseif isNew__(newV, rawV) then
-        logFile("goto downloadIndexFile_ by rawV")
+        utils.logFile("goto downloadIndexFile_ by rawV")
         loader.downloadIndexFile_(result)
         return
     end
@@ -326,16 +326,16 @@ function loader.checkVersionNumber_(result)
 end
 
 function loader.downloadIndexFile_(result)
-    logFile("loader.downloadIndexFile_(result)")
+    utils.logFile("loader.downloadIndexFile_(result)")
     assert(loader.state_ == STATES.downVersionEnd)
     loader.setState_(STATES.downIndex)
     local function failFunc()
-        logFile("download index fail")
+        utils.logFile("download index fail")
         loader.setState_(STATES.downIndexEnd)
         return loader.endWithEvent_(EVENTS.fail, 'download index file fail')
     end
     local function sucFunc(file)
-        logFile("download index suc", file)
+        utils.logFile("download index suc", file)
         loader.setState_(STATES.downIndexEnd)
         if crypto.md5file(file) ~= result.indexSign then
             return loader.endWithEvent_(EVENTS.fail, 'check new index file sign fail')
@@ -351,7 +351,7 @@ function loader.downloadIndexFile_(result)
         loader.setState_(STATES.downIndexEnd)
         loader.downloadFiles_()
     end
-    logFile("before download index: ", loader.indexFileOfNew(), result.indexURL)
+    utils.logFile("before download index: ", loader.indexFileOfNew(), result.indexURL)
     http.download(result.indexURL .. '?' .. os.time(), loader.indexFileOfNew(), sucFunc, failFunc)
 end
 
@@ -430,7 +430,7 @@ function loader.filterProjectFiles_(workList)
 end
 
 function loader.downloadFiles_()
-    logFile("loader.downloadFiles_()")
+    utils.logFile("loader.downloadFiles_()")
     assert(loader.state_ == STATES.downIndexEnd)
     loader.setState_(STATES.downFiles)
 
@@ -443,8 +443,7 @@ function loader.downloadFiles_()
     downList_ = loader.filterCopyedFiles_(downList_, currPath, newPath) -- 去除从当前版中复制成功的项
     downList_ = loader.filterProjectFiles_(downList_) -- 去除原版中已存在且相同的项
 
-    logFile("==============================================111")
-    logFile("calc downlist: ", json.encode(downList_))
+    utils.logFile("calc downlist: ", json.encode(downList_))
     
     downloadList = downList_
     downFailList = {}
@@ -489,14 +488,14 @@ function loader.calcSizeAndCount_(list)
 end
 
 function loader.startCheckScheduler_()
-    logFile("loader.startCheckScheduler_()")
+    utils.logFile("loader.startCheckScheduler_()")
     if not DOWNLOAD_SCHEDULER then
         DOWNLOAD_SCHEDULER = scheduler.scheduleGlobal(loader.checkDownload_, 0.1)
     end
 end
 
 function loader.stopCheckScheduler_()
-    logFile("loader.stopCheckScheduler_()")
+    utils.logFile("loader.stopCheckScheduler_()")
     if DOWNLOAD_SCHEDULER then
         scheduler.unscheduleGlobal(DOWNLOAD_SCHEDULER)
         DOWNLOAD_SCHEDULER = nil
@@ -512,12 +511,12 @@ function loader.getResURL_(sign)
 end
 
 function loader.downloadResFile_(filePath, fileMetaData)
-    logFile("loader.downloadResFile_", filePath)
+    utils.logFile("loader.downloadResFile_", filePath)
     assert(filePath and fileMetaData)
     local fileTotalSize, fileMD5 = fileMetaData[1], fileMetaData[2]
     
     local function failFunc()
-        logFile("download res fail!", filePath)
+        utils.logFile("download res fail!", filePath)
         loader.doingList_[filePath] = nil
         DOWNLOAD_TASK_RUNNING = DOWNLOAD_TASK_RUNNING - 1
         downFailList[filePath] = fileMetaData
@@ -525,7 +524,7 @@ function loader.downloadResFile_(filePath, fileMetaData)
     
     local lastDownSize = 0
     local function sucFunc(file)
-        logFile("download resfile suc: ", filePath)
+        utils.logFile("download resfile suc: ", filePath)
         loader.doingList_[filePath] = nil
         DOWNLOAD_TASK_RUNNING = DOWNLOAD_TASK_RUNNING - 1
         if crypto.md5file(file) ~= fileMD5 then  -- 下载的文件MD5不正确
@@ -559,12 +558,12 @@ end
 
 -- 启用新版本的索引文件和版本文件
 function loader.overWriteCurrFiles_()
-    logFile("loader.overWriteCurrFiles_()")
+    utils.logFile("loader.overWriteCurrFiles_()")
     if writeFile(loader.indexFileOfCurr(), readFile(loader.indexFileOfNew())) then
-        logFile("overWriteCurrFiles_ success")
+        utils.logFile("overWriteCurrFiles_ success")
         local path = loader.getCurrPath_()
         if utils.exists(path) then
-            logFile("delpath: ", path)
+            utils.logFile("delpath: ", path)
             rmdir(path)
         end
         return true
@@ -574,7 +573,7 @@ function loader.overWriteCurrFiles_()
 end
 
 function loader.onDownloadFinish_(desc)
-    logFile("loader.onDownloadFinish_", desc)
+    utils.logFile("loader.onDownloadFinish_", desc)
     loader.setState_(STATES.downFilesEnd)
     if tableCount(downFailList) == 0 then  -- 下载完成且没有失败的
         loader.overWriteCurrFiles_()

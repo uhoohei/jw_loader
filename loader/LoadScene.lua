@@ -1,5 +1,6 @@
 local loader = require("loader.loader")
 local display = require("loader.display")
+local utils = require("loader.utils")
 
 local scene = cc.Scene:create()
 scene.name = "LoadScene"
@@ -47,6 +48,7 @@ function scene._addUI()
 end
 
 function scene._sceneHandler(event)
+    utils.logFile("scene._sceneHandler(event)", event)
     if event == "enter" then
         scene.onEnter()
     elseif event == "cleanup" then
@@ -63,6 +65,7 @@ local function dump(tbl)
 end
 
 function scene._updateHandler(event, ...)
+    utils.logFile("scene._updateHandler", event)
     local vars = {...}
     local str = table.concat(vars, ", ")
     if DEBUG and DEBUG > 0 then
@@ -92,6 +95,7 @@ function scene.setProgress_(percent)
 end
 
 function scene.enterGameApp()
+    utils.logFile("scene.enterGameApp()")
     for i,v in ipairs(updater.preload_zips) do
         cc.LuaLoadChunksFromZIP(v)
     end
@@ -103,6 +107,7 @@ function scene.onEnter()
 end
 
 function scene.onExit()
+    utils.logFile("scene.onExit()")
     loader.clean()
     scene:unregisterScriptHandler()
 end

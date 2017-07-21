@@ -22,8 +22,8 @@ LoadApp.__index = LoadApp
 LoadApp.__ctype = 2
 
 local sharedDirector = cc.Director:getInstance()
-local sharedFileUtils = cc.FileUtils:getInstance()
 local loader = require("loader.loader")
+local utils = require("loader.utils")
 local appName = "updater"  -- 更新模块的全局名称，要修改的话得修改关联的地方
 
 function LoadApp.new(...)
@@ -34,12 +34,15 @@ function LoadApp.new(...)
 end
 
 function LoadApp:ctor(configs)
+    utils.removeLogFile()
+    utils.logFile("LoadApp:ctor", configs)
     assert(configs.preload_zips)
     assert(configs.app_entrance)
     assert(configs.work_path)
     assert(configs.design_width)
     assert(configs.design_height)
     assert(configs.seconds)
+    utils.logFile("assert finish")
     _G[appName] = self
     self.configs_ = configs
     self.preload_zips = configs.preload_zips
@@ -54,9 +57,11 @@ function LoadApp:ctor(configs)
     self.progress_bg_name = configs.progress_bg_name
     self.progress_fg_name = configs.progress_fg_name
     self.zip64 = configs.zip64
+    utils.logFile("set configs finish.")
 end
 
 function LoadApp:run()
+    utils.logFile("LoadApp:run()")
     loader.init(self.zip64)
     local scene = require("loader.LoadScene")
     self:enterScene(scene)
