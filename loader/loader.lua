@@ -8,7 +8,6 @@ local utils = require("loader.utils")
 
 local print_r = utils.print_r
 local checkint = utils.checkint
-local exists = utils.exists
 local writeFile = utils.writeFile
 local logFile = utils.logFile
 local removeFile = utils.removeFile
@@ -178,7 +177,7 @@ function loader.checkCurrPathByIndex(index)
         return
     end
     local path = loader.getCurrPathByIndex(index)
-    if path and exists(path) then
+    if path and utils.exists(path) then
         return path
     end
 end
@@ -423,7 +422,7 @@ function loader.filterFilesByPathAndList_(newPath, workList)
     local list = {}
     for k,v in pairs(workList) do
         local filename = newPath .. k
-        if not exists(filename) then
+        if not utils.exists(filename) then
             list[k] = v
         elseif crypto.md5file(filename) ~= v[2] then
             removeFile(filename)
@@ -613,7 +612,7 @@ function loader.overWriteCurrFiles_()
     if writeFile(loader.indexFileOfCurr(), readFile(loader.indexFileOfNew())) then
         logFile("overWriteCurrFiles_ success")
         local path = loader.getCurrPath_()
-        if exists(path) then
+        if utils.exists(path) then
             logFile("delpath: ", path)
             rmdir(path)
         end
