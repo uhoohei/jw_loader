@@ -442,19 +442,6 @@ function loader.downloadFiles_()
     loader.totalSize_, loader.totalCount_ = loader.calcSizeAndCount_(downList_)
     loader.onProgress_(loader.calcDownloadProgress_())
     
-    if kCCNetworkStatusReachableViaWWAN == network.getInternetConnectionStatus() and 
-        loader.totalSize_ > updater.slient_size then   -- 数据网络下的提示下载
-        local desc = versionInfoNew.desc or "发现新的资源包需要下载，建议您立即下载。"
-        desc = desc .. string.format("\n大小：%sM", string.format("%0.1f", loader.totalSize_ / 1024 / 1024))
-        device.showAlert("温馨提示", desc, {"取消", "下载"}, function (event)
-            if event.buttonIndex == 1 then  -- 取消
-                return loader.endWithEvent_(EVENTS.fail, "user cancel in WWAN.")
-            else -- 下载
-                loader.startCheckScheduler_()
-            end
-        end)
-        return
-    end
     loader.startCheckScheduler_()
 end
 
