@@ -145,9 +145,6 @@ function utils.rmdir(path)
 end
 
 function utils.readFile(path)
-    if device.isAndroid then
-        return cc.HelperFunc:getFileData(path)
-    end
     local file, errors = io.open(path, "r")
     if file then
         local content = file:read("*a")
