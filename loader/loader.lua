@@ -6,7 +6,6 @@ local network = require("loader.network")
 local scheduler = require("loader.scheduler")
 local utils = require("loader.utils")
 
-local print_r = utils.print_r
 local checkint = utils.checkint
 local writeFile = utils.writeFile
 local removeFile = utils.removeFile
@@ -431,10 +430,10 @@ function loader.downloadFiles_()
     mkdir(newPath)  -- 创建新版的文件夹
 
     local downList_ = indexInfoNew.assets
+    utils.logFile("full assets: ", downList_)
     downList_ = loader.filterFilesByPathAndList_(newPath, downList_) -- 去除已下载成功的项
     downList_ = loader.filterCopyedFiles_(downList_, currPath, newPath) -- 去除从当前版中复制成功的项
     downList_ = loader.filterProjectFiles_(downList_) -- 去除原版中已存在且相同的项
-
     utils.logFile("calc downlist: ", downList_)
     
     loader.downloadList_ = downList_
@@ -580,6 +579,9 @@ function loader.checkDownload_()
     end
     if loader.isFinish_() then
         return loader.onDownloadFinish_("isall finish")
+    end
+    if not loader.downloadList_ then
+        return
     end
     
     local taskCount = 0
