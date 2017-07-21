@@ -31,6 +31,17 @@ THE SOFTWARE.
 
 ]]
 
+-- 小补丁，因为不用CURL库的话这几个变量不会被导出
+if not kCCNetworkStatusNotReachable then
+    kCCNetworkStatusNotReachable = 0
+end
+if not kCCNetworkStatusReachableViaWiFi then
+    kCCNetworkStatusReachableViaWiFi = 1
+end
+if not kCCNetworkStatusReachableViaWWAN then
+    kCCNetworkStatusReachableViaWWAN = 2
+end
+
 local network = {}
 
 -- start --

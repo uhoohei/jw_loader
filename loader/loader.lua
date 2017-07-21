@@ -19,17 +19,6 @@ local loadJsonFile = utils.loadJsonFile
 local tableCount = utils.tableCount
 local readResFile = utils.readResFile
 
--- 小补丁，因为不用CURL库的话这几个变量不会被导出
-if not kCCNetworkStatusNotReachable then
-    kCCNetworkStatusNotReachable = 0
-end
-if not kCCNetworkStatusReachableViaWiFi then
-    kCCNetworkStatusReachableViaWiFi = 1
-end
-if not kCCNetworkStatusReachableViaWWAN then
-    kCCNetworkStatusReachableViaWWAN = 2
-end
-
 --------------------------------- CONFIG START -------------------------------
 -- 下载版本文件，对比检查，下载资源索引文件，检验索引文件，
 -- 分析需要下载的文件，下载并检验文件，替换当前版本，更新结束。
