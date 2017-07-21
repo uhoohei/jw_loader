@@ -50,7 +50,7 @@ function LoadApp:ctor(configs)
     self.work_path = configs.work_path
     self.design_width = configs.design_width
     self.design_height = configs.design_height
-    self.seconds = configs.seconds
+    self.seconds = math.max(120, configs.seconds)
     
     self.bg_sprite_name = configs.bg_sprite_name
     self.progress_bg_name = configs.progress_bg_name
