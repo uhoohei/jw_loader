@@ -61,10 +61,6 @@ function utils.checkint(value)
 end
 
 function utils.exists(path)
-    if device.isAndroid then
-        return cc.FileUtils:getInstance():isFileExist(path)
-    end
-
     local file = io.open(path, "r")
     if file then
         io.close(file)
