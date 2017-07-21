@@ -48,8 +48,8 @@ function scene._addUI()
     loader.setLoadEventHandler(scene.onLoaderEvent)
 end
 
-function scene.onLoaderEvent(event)
-    utils.logFile("scene.onLoaderEvent(event)", event)
+function scene._sceneHandler(event)
+    utils.logFile("scene._sceneHandler(event)", event)
     if event == "enter" then
         scene.onEnter()
     elseif event == "cleanup" then
@@ -65,8 +65,8 @@ local function dump(tbl)
     end
 end
 
-function scene._updateHandler(event, ...)
-    utils.logFile("scene._updateHandler", event)
+function scene.onLoaderEvent(event, ...)
+    utils.logFile("scene.onLoaderEvent", event)
     local vars = {...}
     local str = table.concat(vars, ", ")
     if DEBUG and DEBUG > 0 then
