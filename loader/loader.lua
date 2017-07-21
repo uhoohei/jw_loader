@@ -464,7 +464,7 @@ end
 function loader.startCheckScheduler_()
     utils.logFile("loader.startCheckScheduler_()")
     if not DOWNLOAD_SCHEDULER then
-        DOWNLOAD_SCHEDULER = scheduler.scheduleGlobal(loader.checkDownload_, 0.1)
+        DOWNLOAD_SCHEDULER = scheduler.scheduleGlobal(loader.checkUpdateProgress_, 0.1)
     end
 end
 
@@ -573,7 +573,7 @@ function loader.isFinish_()
     return true
 end
 
-function loader.checkDownload_()
+function loader.checkUpdateProgress_()
     if os.time() - loader.startTime_ > (updater.seconds or 5 * 60) then
         return loader.onDownloadFinish_("timeout")
     end
