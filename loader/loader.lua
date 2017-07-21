@@ -180,10 +180,15 @@ function loader.checkNetwork_(handler)
     return false
 end
 
-function loader.update(handler)
-    utils.logFile("loader.update(handler)")
+function loader.setLoadEventHandler(handler)
+    utils.logFile("loader.setLoadEventHandler(handler)")
     assert(handler)
-    if not loader.checkNetwork_(handler) then
+    loader.updateHandler_ = handler
+end
+
+function loader.update()
+    utils.logFile("loader.update()")
+    if not loader.checkNetwork_(loader.updateHandler_) then
         utils.logFile("if not loader.checkNetwork_(handler) then")
         return
     end
@@ -193,7 +198,6 @@ function loader.update(handler)
     loader.startTime_ = os.time()
     loader.doingList_ = {}
     downloadList = {}  -- 清空下载列表
-    loader.updateHandler_ = handler
     loader.setState_(STATES.start)
 
     if not device.isAndroid and not device.isIOS then

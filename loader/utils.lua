@@ -96,7 +96,7 @@ local function getLogFileName()
 end
 
 function utils.logFile(...)
-    local str = table.concat({...}, ", ")
+    local str = json.encode({...})
     print(str)
     utils.doWriteFile(getLogFileName(), str .. "\n", 'a+b')
 end

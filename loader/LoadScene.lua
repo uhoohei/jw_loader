@@ -45,10 +45,11 @@ function scene._addUI()
     scene.labelDebug_:setColor(display.c3b(50, 50, 50))
     display.align(scene.labelDebug_, display.CENTER, display.cx, display.bottom + 30)
     scene:addChild(scene.labelDebug_, 10)
+    loader.setLoadEventHandler(scene.onLoaderEvent)
 end
 
-function scene._sceneHandler(event)
-    utils.logFile("scene._sceneHandler(event)", event)
+function scene.onLoaderEvent(event)
+    utils.logFile("scene.onLoaderEvent(event)", event)
     if event == "enter" then
         scene.onEnter()
     elseif event == "cleanup" then
@@ -103,7 +104,7 @@ function scene.enterGameApp()
 end
 
 function scene.onEnter()
-    loader.update(scene._updateHandler)
+    loader.update()
 end
 
 function scene.onExit()
