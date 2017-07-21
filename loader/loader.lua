@@ -523,6 +523,9 @@ function loader.downloadResFile_(filePath, fileMetaData)
     end
     
     local function progressFunc(total, dltotal)
+        if not DOWNLOAD_SCHEDULER then
+            return
+        end
         if total > 0 then
             fileTotalSize = total
         end
