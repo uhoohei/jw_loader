@@ -56,33 +56,10 @@ function LoadApp:ctor(configs)
     self.zip64 = configs.zip64
 end
 
-function LoadApp:run(checkNewUpdatePackage)
+function LoadApp:run()
     loader.init(self.zip64)
-    local newLoaderPath = loader.hasNewUpdatePackage()
-    print("LoadApp.run(%s)", checkNewUpdatePackage)
-    if checkNewUpdatePackage and newLoaderPath then
-        self:updateSelf(newLoaderPath)
-    else
-        local scene = require("loader.LoadScene")
-        self:enterScene(scene)
-    end
-end
-
-function LoadApp:updateSelf(newLoaderPath)
-    print("LoadApp.updateSelf ", newLoaderPath)
-    print("--before clean")
-    loader.clean()
-    for __,v in ipairs(updatePackage) do
-        package.preload[v] = nil
-        package.loaded[v] = nil
-    end
-    print("--after clean")
-    local configs = self.configs_
-    _G[appName] = nil  -- 清除自己
-    cc.LuaLoadChunksFromZIP(newLoaderPath)
-    print("--after cc.LuaLoadChunksForZIP")
-    require("loader.LoadApp").new(configs):run(false)
-    print("--after require and run")
+    local scene = require("loader.LoadScene")
+    self:enterScene(scene)
 end
 
 function LoadApp:enterScene(__scene)

@@ -153,55 +153,6 @@ function loader.loadCurrIndex_()
     return true
 end
 
--- 从给定的文件路径来寻找对应的当前版的完整路径
--- 如果找到，那么对应的路径为 更新目录/版本目录/此文件的子路径值
-function loader.getCurrPathByIndex(index)
-    assert(index)
-    if not indexInfoCurr or not indexInfoCurr.assets then
-        return
-    end
-    if not indexInfoCurr.assets[index] then
-        return
-    end
-    return updater.work_path .. indexInfoCurr.scriptVersion .. '/' .. index
-end
-
--- 获得当前版中的资源的路径，如果资源不存在，或者资源与原版的一致，则返回空
-function loader.checkCurrPathByIndex(index)
-    local currSign = loader.getCurrSignByIndex(index)
-    if not currSign then
-        return
-    end
-    local rawSign = loader.getRawSignByIndex(index)
-    if currSign == rawSign then  -- 两个版本一样，返回空
-        return
-    end
-    local path = loader.getCurrPathByIndex(index)
-    if path and utils.exists(path) then
-        return path
-    end
-end
-
--- 获得当前版的签名数据
-function loader.getCurrSignByIndex(index)
-    if not indexInfoCurr or not indexInfoCurr.assets then
-        return
-    end
-    return indexInfoCurr.assets[index][2]
-end
-
--- 获得原版的签名数据
-function loader.getRawSignByIndex(index)
-    if not indexInfoRaw or not indexInfoRaw.assets then
-        return
-    end
-    return indexInfoRaw.assets[index][2]
-end
-
-function loader.hasNewUpdatePackage()
-    return loader.checkCurrPathByIndex(UPDATE_PACKAGE_INDEX)
-end
-
 function loader.setState_(state)
     assert(state)
     loader.state_ = state
