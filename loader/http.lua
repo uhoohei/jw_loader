@@ -85,13 +85,11 @@ local function onDownloaded(event, sucFunc, failFunc, progressFunc, filename)
         end
     elseif not ok then
         -- 请求失败，显示错误代码和错误消息
-        local httpCode = request:getResponseStatusCode()
         local errorCode = request:getErrorCode()
         local message = request:getErrorMessage()
+        utils.logFile("HTTP download fail: ", event.name, errorCode, message)
         if failFunc then
-            failFunc(httpCode, errorCode, message)
-        else
-            utils.logFile("HTTP download fail: ", event.name, httpCode, errorCode, message)
+            failFunc(errorCode, message)
         end
     elseif ok then
         utils.logFile("before save file: ", filename)
