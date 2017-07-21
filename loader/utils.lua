@@ -73,7 +73,7 @@ function utils.exists(path)
     return false
 end
 
-function utils.writeFile(path, content, mode)
+function utils.doWriteFile(path, content, mode)
     local mode = mode or "w+b"
     local file = io.open(path, mode)
     if file then
@@ -85,17 +85,24 @@ function utils.writeFile(path, content, mode)
     end
 end
 
--- TODO: fix hard code path
+function utils.writeFile(path, content, mode)
+    utils.logFile("utils.writeFile", path, string.len(content), mode)
+    return utils.doWriteFile(path, content, mode)
+end
+
+local function getLogFileName()
+    local path = device.writablePath
+    return path .. "/jw_loader.txt"
+end
+
 function utils.logFile(...)
-    if DEBUG and DEBUG > 0 then
-        local str = table.concat({...}, ", ")
-        local path = cc.FileUtils:getInstance():getWritablePath()
-        if device.isAndroid then  -- TODO: fix这样硬编码
-            path = "/storage/sdcard0/"
-        end
-        print(str)
-        utils.writeFile(path .. 'loader.txt', str .. "\n", 'a+b')
-    end
+    local str = table.concat({...}, ", ")
+    print(str)
+    utils.doWriteFile(getLogFileName(), str .. "\n", 'a+b')
+end
+
+function utils.removeLogFile()
+    utils.removeFile(getLogFileName())
 end
 
 function utils.removeFile(path)
@@ -155,6 +162,7 @@ function utils.readFile(path)
 end
 
 function utils.copyFile(from, to, mode)
+    utils.logFile("utils.copyFile", from, to, mode)
     if not utils.exists(from) then
         return false
     end
