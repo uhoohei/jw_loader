@@ -57,8 +57,6 @@ local versionInfoNew = {}  -- 新下载的版本信息
 local indexInfoCurr = {}  -- 当前版的文件索引信息，可参考resindex.txt文件
 local indexInfoRaw = {}  -- 原包里面的索引信息
 local indexInfoNew = {}  -- 新下载的索引文件的信息
-local downloadList = {}  -- 总下载任务队列
-local downFailList = {}  -- 下载失败的文件队列
 
 --[[
 名词说明：
@@ -73,14 +71,13 @@ local INDEX_FILE_NAME = "resindex.txt"  -- 其实是json，这里只是为了防
 local UPDATE_PACKAGE_INDEX = "loader%s.zip"  -- 更新包的索引名称, 这里是为了能更新自身而放在这里的
 local DOWNLOAD_THREADS = 4  -- 同时下载的任务数
 local DOWNLOAD_SCHEDULER = nil  -- 下载的定时器
-local DOWNLOAD_TASK_RUNNING = 0  -- 正在进行的下载数量
 --------------------------------- CONFIG END ---------------------------------
 
 
 local loader = {}
 
 loader.state_ = nil
-loader.doingList_ = {}
+loader.downloadStates_ = {}
 loader.startTime_ = 0
 
 -- 当前有效的索引文件
@@ -96,6 +93,7 @@ end
 function loader.init(zip64)
     utils.logFile('loader.init', zip64)
     local str64 = zip64 or ""
+    loader.downloadList_ = {}
     UPDATE_PACKAGE_INDEX = string.format(UPDATE_PACKAGE_INDEX, zip64)
     if nil ~= loader.state_ then
         utils.logFile('loader.init fail with nil state')
@@ -185,8 +183,8 @@ function loader.update()
         return
     end
     loader.startTime_ = os.time()
-    loader.doingList_ = {}
-    downloadList = {}  -- 清空下载列表
+    loader.downloadStates_ = {}
+
     loader.setState_(STATES.start)
 
     if not device.isAndroid and not device.isIOS then
@@ -243,7 +241,7 @@ function loader.clean()
     indexInfoCurr = {}
     indexInfoRaw = {}
     indexInfoNew = {}
-    loader.doingList_ = {}
+    loader.downloadStates_ = {}
 end
 
 -- 下载version.txt文件
@@ -436,18 +434,14 @@ function loader.downloadFiles_()
     downList_ = loader.filterCopyedFiles_(downList_, currPath, newPath) -- 去除从当前版中复制成功的项
     downList_ = loader.filterProjectFiles_(downList_) -- 去除原版中已存在且相同的项
 
-    utils.logFile("calc downlist: ", json.encode(downList_))
+    utils.logFile("calc downlist: ", downList_)
     
-    downloadList = downList_
-    downFailList = {}
+    loader.downloadList_ = downList_
     
     loader.downloadedSize_ = 0
-    loader.downloadedCount_ = 0
     loader.totalSize_, loader.totalCount_ = loader.calcSizeAndCount_(downList_)
     loader.onProgress_(loader.calcDownloadProgress_())
     
-    DOWNLOAD_TASK_RUNNING = 0
-
     if kCCNetworkStatusReachableViaWWAN == network.getInternetConnectionStatus() and 
         loader.totalSize_ > updater.slient_size then   -- 数据网络下的提示下载
         local desc = versionInfoNew.desc or "发现新的资源包需要下载，建议您立即下载。"
@@ -472,11 +466,13 @@ function loader.calcDownloadProgress_()
 end
 
 function loader.calcSizeAndCount_(list)
+    utils.logFile("loader.calcSizeAndCount_(list)")
     local size, count = 0, 0
     for k,v in pairs(list) do
         size = size + v[1]
         count = count + 1
     end
+    utils.logFile(size, count)
     return size, count
 end
 
@@ -510,23 +506,19 @@ function loader.downloadResFile_(filePath, fileMetaData)
     
     local function failFunc()
         utils.logFile("download res fail!", filePath)
-        loader.doingList_[filePath] = nil
-        DOWNLOAD_TASK_RUNNING = DOWNLOAD_TASK_RUNNING - 1
-        downFailList[filePath] = fileMetaData
+        loader.downloadStates_[filePath] = 0
     end
     
     local lastDownSize = 0
     local function sucFunc(file)
         utils.logFile("download resfile suc: ", filePath)
-        loader.doingList_[filePath] = nil
-        DOWNLOAD_TASK_RUNNING = DOWNLOAD_TASK_RUNNING - 1
         if crypto.md5file(file) ~= fileMD5 then  -- 下载的文件MD5不正确
-            downFailList[filePath] = fileMetaData
+            loader.downloadStates_[filePath] = 0
             return
         end
 
+        loader.downloadStates_[filePath] = 2
         loader.incrDownloadedSize_(fileTotalSize - lastDownSize)  -- 累加下载大小
-        loader.downloadedCount_ = loader.downloadedCount_ + 1
         loader.onProgress_(loader.calcDownloadProgress_())  -- 通知总下载进度
     end
     
@@ -546,6 +538,7 @@ function loader.downloadResFile_(filePath, fileMetaData)
     local filename = loader.getNewPath_() .. filePath
     local pinfo = utils.pathinfo(filename)
     mkdir(pinfo.dirname, true)
+    loader.downloadStates_[filePath] = 1
     http.download(url, filename, sucFunc, failFunc, seconds, progressFunc)
 end
 
@@ -568,43 +561,51 @@ end
 function loader.onDownloadFinish_(desc)
     utils.logFile("loader.onDownloadFinish_", desc)
     loader.setState_(STATES.downFilesEnd)
-    if tableCount(downFailList) == 0 then  -- 下载完成且没有失败的
+    if loader.isFinish_() then  -- 下载完成且没有失败的
         loader.overWriteCurrFiles_()
         indexInfoCurr = indexInfoNew
         return loader.onSuccess_(SUCCESS_TYPES.updateSuccess)
     else
-        return loader.endWithEvent_(EVENTS.fail, ERRORS.unknown)
+        return loader.endWithEvent_(EVENTS.fail, desc)
     end
 end
 
 function loader.isFinish_()
-    return 0 == tableCount(downloadList) and 0 == tableCount(loader.doingList_)
+    if tableCount(loader.downloadList_) ~= tableCount(loader.downloadStates_) then
+        return false
+    end
+    for k,v in pairs(loader.downloadStates_) do
+        if v ~= 2 then
+            return false
+        end
+    end
+    return true
 end
 
 function loader.checkDownload_()
-    if loader.isFinish_() then
-        return loader.onDownloadFinish_("isall finish")
-    end
-    if loader.downloadedCount_ > 5000 then
-        return loader.onDownloadFinish_("download times too much")
-    end
     if os.time() - loader.startTime_ > (updater.seconds or 5 * 60) then
         return loader.onDownloadFinish_("timeout")
     end
+    if loader.isFinish_() then
+        return loader.onDownloadFinish_("isall finish")
+    end
     
-    local list = {}
-    for k,v in pairs(downloadList) do
-        loader.doingList_[k] = true  -- 记录正在执行，在下载结束的时候要置为false
-        loader.downloadResFile_(k, v)
-        table.insert(list, k)
-        DOWNLOAD_TASK_RUNNING = DOWNLOAD_TASK_RUNNING + 1
-        if DOWNLOAD_TASK_RUNNING >= DOWNLOAD_THREADS then
+    local taskCount = 0
+    for k,v in pairs(loader.downloadList_) do  -- 0 未开始 1 下载中 2 已下载
+        local status = loader.downloadStates_[k]
+        if status == nil then
+            loader.downloadStates_[k] = 0
+            status = 0
+        end
+        if status == 0 then
+            taskCount = taskCount + 1
+            loader.downloadResFile_(k, v)
+        elseif status == 1 then
+            taskCount = taskCount + 1
+        end
+        if taskCount > DOWNLOAD_THREADS then
             break
         end
-    end
-
-    for _,v in ipairs(list) do  -- 从下载队伍中去除执行中的下载任务
-        downloadList[v] = nil
     end
 end
 
