@@ -93,7 +93,7 @@ end
 function loader.init(zip64)
     utils.logFile('loader.init', zip64)
     local str64 = zip64 or ""
-    loader.downloadList_ = {}
+    loader.downloadList_ = nil
     UPDATE_PACKAGE_INDEX = string.format(UPDATE_PACKAGE_INDEX, zip64)
     if nil ~= loader.state_ then
         utils.logFile('loader.init fail with nil state')
@@ -183,6 +183,7 @@ function loader.update()
         return
     end
     loader.startTime_ = os.time()
+    loader.startCheckScheduler_()
     loader.downloadStates_ = {}
 
     loader.setState_(STATES.start)
@@ -441,8 +442,6 @@ function loader.downloadFiles_()
     loader.downloadedSize_ = 0
     loader.totalSize_, loader.totalCount_ = loader.calcSizeAndCount_(downList_)
     loader.onProgress_(loader.calcDownloadProgress_())
-    
-    loader.startCheckScheduler_()
 end
 
 function loader.calcDownloadProgress_()
@@ -549,7 +548,7 @@ function loader.overWriteCurrFiles_()
 end
 
 function loader.onDownloadFinish_(desc)
-    utils.logFile("loader.onDownloadFinish_", desc)
+    utils.logFile("loader.onDownloadFinish_", desc, loader.downloadStates_)
     loader.setState_(STATES.downFilesEnd)
     if loader.isFinish_() then  -- 下载完成且没有失败的
         loader.overWriteCurrFiles_()
@@ -561,6 +560,9 @@ function loader.onDownloadFinish_(desc)
 end
 
 function loader.isFinish_()
+    if not loader.downloadList_ then
+        return false
+    end
     if tableCount(loader.downloadList_) ~= tableCount(loader.downloadStates_) then
         return false
     end
