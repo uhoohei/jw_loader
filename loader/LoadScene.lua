@@ -34,8 +34,8 @@ function scene._addUI()
 
         local progress = cc.ProgressTimer:create(cc.Sprite:create(progress_fg_name))
         progress:setType(1)
-        progress:setMidpoint({0, 0.5})
-        progress:setBarChangeRate({1, 0})
+        progress:setMidpoint({x=0, y=0.5})
+        progress:setBarChangeRate({x=1, y=0})
         progress:setPosition(x, y)
         scene:addChild(progress, 10)
         scene.progress_ = progress
