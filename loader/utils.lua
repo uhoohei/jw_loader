@@ -1,6 +1,7 @@
 require "lfs"
 local device = require("loader.device")
 local json = require("loader.json")
+local crypto = require("loader.crypto")
 
 local print = print
 local tconcat = table.concat
@@ -69,6 +70,18 @@ function utils.exists(path)
     return false
 end
 
+function utils.fileSize(path)
+    local size = 0
+    local file = io.open(path, "r")
+    if file then
+        local current = file:seek()
+        size = file:seek("end")
+        file:seek("set", current)
+        io.close(file)
+    end
+    return size
+end
+
 function utils.doWriteFile(path, content, mode)
     local mode = mode or "w+b"
     local file = io.open(path, mode)
@@ -82,23 +95,30 @@ function utils.doWriteFile(path, content, mode)
 end
 
 function utils.writeFile(path, content, mode)
-    utils.logFile("utils.writeFile", path, string.len(content), mode)
+    utils.logFile("utils.writeFile", path, string.len(content or ""), mode)
     return utils.doWriteFile(path, content, mode)
 end
 
 local function getLogFileName()
-    local path = device.writablePath
-    return path .. "/jw_loader.txt"
+    local path =  device.getSDCardPath()
+    return path .. '/jw_loader' .. GAME_ID .. ".txt"
 end
 
 function utils.logFile(...)
-    local str = json.encode({...})
+    local str = json.encode({os.time(), ...})
     print(str)
     utils.doWriteFile(getLogFileName(), str .. "\n", 'a+b')
 end
 
-function utils.removeLogFile()
-    utils.removeFile(getLogFileName())
+function utils.removeLogFile(keepSize)
+    local filePath = getLogFileName()
+    if keepSize and keepSize > 0 then
+        if utils.fileSize(filePath) < keepSize then
+            utils.logFile("removeLogFile return by keepSize ", keepSize)
+            return
+        end
+    end
+    utils.removeFile(filePath)
 end
 
 function utils.removeFile(path)
@@ -148,6 +168,7 @@ function utils.rmdir(path)
 end
 
 function utils.readFile(path)
+    utils.logFile("utils.readFile", path)
     local file, errors = io.open(path, "r")
     if file then
         local content = file:read("*a")
@@ -179,7 +200,7 @@ function utils.mkdir(path, r)
     local rPath = '/'
     local ok, err = false, nil
     for i,v in ipairs(arr) do
-        if string.len(v) > 0 then
+        if string.len(v or "") > 0 then
             rPath = rPath .. v .. '/'
             ok, err = utils.mkdir(rPath)
         end
@@ -216,7 +237,7 @@ end
 
 -- 来自框架中的 io.pathinfo 函数
 function utils.pathinfo(path)
-    local pos = string.len(path)
+    local pos = string.len(path or "")
     local extpos = pos + 1
     while pos > 0 do
         local b = string.byte(path, pos)
@@ -239,6 +260,74 @@ function utils.pathinfo(path)
         basename = basename,
         extname = extname
     }
+end
+
+function utils.isNew(newV, compV)
+    return utils.checkint(newV) > utils.checkint(compV)
+end
+
+-- 比对给定的列表与本地文件
+-- 如果本地文件存在，且文件的MD5值相等，则跳过对应文件
+-- 反之将错误的本地文件删除，并放进列表
+function utils.filterFilesByPathAndList(newPath, workList)
+    utils.logFile("utils.filterFilesByPathAndList", newPath)
+    local list = {}
+    for k,v in pairs(workList) do
+        local filename = newPath .. k
+        if not utils.exists(filename) then
+            list[k] = v
+        elseif crypto.md5file(filename) ~= v[2] then
+            utils.removeFile(filename)
+            list[k] = v
+        end
+    end
+    return list
+end
+
+function utils.filterCopyedFiles(workList, currPath, newPath)
+    utils.logFile("utils.filterCopyedFiles", currPath, newPath)
+    local list = {}
+    for k,v in pairs(workList) do
+        local from = currPath .. k
+        local to = newPath .. k
+        if not utils.exists(from) or crypto.md5file(from) ~= v[2] then
+            list[k] = v
+        else
+            local pinfo = utils.pathinfo(to)
+            utils.mkdir(pinfo.dirname, true)
+            if not utils.copyFile(from, to) then  -- 复制失败，加入列表
+                list[k] = v
+            elseif crypto.md5file(to) ~= v[2] then  -- 文件签名不正确，加入列表
+                list[k] = v
+                utils.removeFile(to)
+            end
+        end
+    end
+    return list
+end
+
+function utils.calcDownloadProgress(taskList, TASK)
+    local taskList = taskList or {}
+    utils.logFile("utils.calcDownloadProgress()")
+    -- 总文件数, 下载成功的文件数, 总大小, 已完成的大小, 下载中的大小
+    local totalFiles, finishFiles, totalSize, finishSize, inProgressSize = 0, 0, 1, 0, 0
+    for _,v in pairs(taskList) do
+        if #v ~= 6 then
+            break
+        end
+        local filePath, fileSize, fileMD5, fileState, failCount, downloadSize = unpack(v)
+        totalFiles = totalFiles + 1
+        totalSize = totalSize + fileSize
+        if fileState == TASK.success then
+            finishFiles = finishFiles + 1
+            finishSize = finishSize + fileSize
+        elseif fileState == TASK.progress then
+            inProgressSize = inProgressSize + downloadSize
+        end
+    end
+    local percent = 7 + math.ceil(math.min(90, (finishSize + inProgressSize) / totalSize * 0.9 * 100))
+    utils.logFile("after calcDownloadProgress: ", totalFiles, finishFiles, totalSize, finishSize, inProgressSize, percent)
+    return totalFiles, finishFiles, totalSize, finishSize, inProgressSize, percent
 end
 
 return utils

@@ -186,4 +186,40 @@ function device.cancelAlert()
     cc.Native:cancelAlert()
 end
 
+local function checknumber(value, base)
+    return tonumber(value, base) or 0
+end
+
+local function round(value)
+    value = checknumber(value)
+    return math.floor(value + 0.5)
+end
+
+local function checkint(value)
+    return round(checknumber(value))
+end
+
+local function callNativeAndroid(java_class, java_method_name, java_method_params, java_method_sig)
+    if DEBUG and DEBUG > 0 then
+        print("callNativeAndroid(%s, %s, %s, %s)", java_class, java_method_name, type(java_method_params), java_method_sig)
+    end
+    local ok, result = luaj.callStaticMethod(java_class, java_method_name, java_method_params, java_method_sig)
+    if ok then
+        return result
+    end
+end
+
+-- 获得SD卡目录
+local sdCardPath = nil
+function device.getSDCardPath()
+    if device.platform ~= "android" then
+        return device.writablePath
+    end
+    if sdCardPath then
+        return sdCardPath
+    end
+    sdCardPath = callNativeAndroid("com/jw/utils/Bridge", "getExternalStorageDirectory", {}, "()Ljava/lang/String;")
+    return sdCardPath
+end
+
 return device

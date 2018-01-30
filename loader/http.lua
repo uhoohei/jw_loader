@@ -4,20 +4,6 @@ local HTTP = {}
 
 local TIMEOUT_SECONDS = 20  -- HTTP 超时时间
 
-local function string_split(input, delimiter)
-    input = tostring(input)
-    delimiter = tostring(delimiter)
-    if (delimiter=='') then return false end
-    local pos,arr = 0, {}
-    -- for each divider found
-    for st,sp in function() return string.find(input, delimiter, pos, true) end do
-        table.insert(arr, string.sub(input, pos, st - 1))
-        pos = sp + 1
-    end
-    table.insert(arr, string.sub(input, pos))
-    return arr
-end
-
 local function onRequestFinished(event, sucFunc, failFunc)
     local ok = (event.name == "completed")
     local request = event.request
