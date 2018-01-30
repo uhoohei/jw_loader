@@ -212,14 +212,14 @@ end
 -- 获得SD卡目录
 local sdCardPath = nil
 function device.getSDCardPath()
-    if device.platform ~= "android" then
-        return device.writablePath
-    end
-    if sdCardPath then
-        return sdCardPath
-    end
-    sdCardPath = callNativeAndroid("com/jw/utils/Bridge", "getExternalStorageDirectory", {}, "()Ljava/lang/String;")
-    return sdCardPath
+    -- if device.platform ~= "android" then
+    return device.writablePath
+    -- end
+    -- if sdCardPath then
+    --     return sdCardPath
+    -- end
+    -- sdCardPath = callNativeAndroid("com/jw/utils/Bridge", "getExternalStorageDirectory", {}, "()Ljava/lang/String;")
+    -- return sdCardPath
 end
 
 return device
